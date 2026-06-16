@@ -1,0 +1,920 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+<meta name="theme-color" content="#0f0c29"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="Elexys Bills"/>
+<title>Elexys Billing — Electronics Project Kits</title>
+<link rel="manifest" href="manifest.json"/>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+
+<style>
+  :root {
+    --bg: #0a0818;
+    --surface: #130f2a;
+    --surface2: #1c1640;
+    --border: #2a2356;
+    --accent: #7c3aed;
+    --accent2: #06b6d4;
+    --accent-glow: rgba(124,58,237,0.35);
+    --green: #10b981;
+    --red: #ef4444;
+    --amber: #f59e0b;
+    --text: #e2e8f0;
+    --muted: #94a3b8;
+    --card-radius: 14px;
+    --font-display: 'Orbitron', monospace;
+    --font-body: 'Inter', sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-body);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── TOP BAR ── */
+  .topbar {
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(10,8,24,0.92);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 16px;
+  }
+  .topbar-logo {
+    font-family: var(--font-display);
+    font-size: 13px; letter-spacing: 1px;
+    background: linear-gradient(135deg, #7c3aed, #06b6d4);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .topbar-actions { display: flex; gap: 8px; }
+
+  /* ── BOTTOM NAV ── */
+  .bottom-nav {
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 100;
+    background: rgba(19,15,42,0.97);
+    border-top: 1px solid var(--border);
+    display: flex;
+  }
+  .nav-btn {
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    padding: 10px 4px 14px;
+    background: none; border: none; cursor: pointer;
+    color: var(--muted); font-size: 10px; font-family: var(--font-body);
+    gap: 4px; transition: color 0.2s;
+  }
+  .nav-btn.active { color: var(--accent2); }
+  .nav-btn svg { width: 22px; height: 22px; }
+
+  /* ── PAGES ── */
+  .page { display: none; padding: 16px 16px 90px; }
+  .page.active { display: block; }
+
+  /* ── SECTION HEADER ── */
+  .section-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 16px;
+  }
+  .section-title {
+    font-family: var(--font-display);
+    font-size: 12px; letter-spacing: 2px; color: var(--accent2);
+    text-transform: uppercase;
+  }
+
+  /* ── STAT CARDS ── */
+  .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--card-radius);
+    padding: 14px;
+    position: relative; overflow: hidden;
+  }
+  .stat-card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+  }
+  .stat-label { font-size: 10px; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 6px; }
+  .stat-value { font-family: var(--font-display); font-size: 18px; color: var(--text); }
+  .stat-value.green { color: var(--green); }
+  .stat-value.amber { color: var(--amber); }
+
+  /* ── BILL CARDS ── */
+  .bill-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--card-radius);
+    padding: 14px; margin-bottom: 10px;
+    cursor: pointer; transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .bill-card:hover { border-color: var(--accent); box-shadow: 0 0 12px var(--accent-glow); }
+  .bill-card-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px; }
+  .bill-number { font-family: var(--font-mono); font-size: 12px; color: var(--accent2); }
+  .bill-amount { font-family: var(--font-display); font-size: 14px; color: var(--green); }
+  .bill-customer { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 2px; }
+  .bill-meta { font-size: 11px; color: var(--muted); display: flex; justify-content: space-between; }
+  .badge {
+    display: inline-block; padding: 2px 8px; border-radius: 20px;
+    font-size: 10px; font-weight: 600; letter-spacing: 0.5px;
+  }
+  .badge-paid { background: rgba(16,185,129,0.15); color: var(--green); border: 1px solid rgba(16,185,129,0.3); }
+  .badge-pending { background: rgba(245,158,11,0.15); color: var(--amber); border: 1px solid rgba(245,158,11,0.3); }
+
+  /* ── FORM ── */
+  .form-group { margin-bottom: 14px; }
+  .form-label { font-size: 11px; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 6px; display: block; }
+  .form-input, .form-select {
+    width: 100%; background: var(--surface2);
+    border: 1px solid var(--border); border-radius: 8px;
+    color: var(--text); font-family: var(--font-body); font-size: 14px;
+    padding: 10px 12px; outline: none; transition: border-color 0.2s;
+  }
+  .form-input:focus, .form-select:focus { border-color: var(--accent); }
+  .form-select option { background: var(--surface2); }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .form-row-3 { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 8px; }
+
+  /* ── ITEMS TABLE ── */
+  .items-table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
+  .items-table th {
+    font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px;
+    padding: 6px 8px; border-bottom: 1px solid var(--border); text-align: left;
+  }
+  .items-table td { padding: 8px; border-bottom: 1px solid rgba(42,35,86,0.5); font-size: 13px; vertical-align: middle; }
+  .items-table tr:last-child td { border-bottom: none; }
+  .del-btn {
+    background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.3);
+    color: var(--red); border-radius: 6px; padding: 4px 8px; cursor: pointer;
+    font-size: 12px; font-family: var(--font-body);
+  }
+
+  .total-box {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 10px; padding: 14px; margin-bottom: 16px;
+  }
+  .total-row { display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 13px; color: var(--muted); }
+  .total-row.final { color: var(--text); font-weight: 600; font-size: 15px; border-top: 1px solid var(--border); padding-top: 10px; margin-top: 6px; }
+  .total-row.final span:last-child { font-family: var(--font-display); color: var(--green); }
+
+  /* ── BUTTONS ── */
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    padding: 11px 18px; border-radius: 8px; font-size: 13px; font-weight: 600;
+    cursor: pointer; border: none; font-family: var(--font-body); transition: all 0.2s;
+  }
+  .btn-primary {
+    background: linear-gradient(135deg, var(--accent), #5b21b6);
+    color: #fff; width: 100%;
+    box-shadow: 0 4px 16px var(--accent-glow);
+  }
+  .btn-primary:hover { opacity: 0.9; transform: translateY(-1px); }
+  .btn-outline {
+    background: transparent; border: 1px solid var(--border); color: var(--text);
+  }
+  .btn-sm { padding: 7px 12px; font-size: 12px; }
+  .btn-cyan {
+    background: rgba(6,182,212,0.15); border: 1px solid rgba(6,182,212,0.4);
+    color: var(--accent2);
+  }
+
+  /* ── MODAL ── */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0; z-index: 200;
+    background: rgba(0,0,0,0.75); backdrop-filter: blur(4px);
+    align-items: flex-end; justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 20px 20px 0 0; width: 100%; max-height: 92vh;
+    overflow-y: auto; padding: 20px 16px 32px;
+    animation: slideUp 0.3s ease;
+  }
+  @keyframes slideUp { from { transform: translateY(40px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+  .modal-handle {
+    width: 40px; height: 4px; background: var(--border);
+    border-radius: 2px; margin: 0 auto 16px;
+  }
+  .modal-title {
+    font-family: var(--font-display); font-size: 13px; letter-spacing: 1px;
+    color: var(--accent2); margin-bottom: 16px; text-align: center;
+  }
+
+  /* ── BILL PREVIEW ── */
+  .bill-preview {
+    background: #fff; color: #111; border-radius: 10px;
+    padding: 20px; font-family: var(--font-body); margin-bottom: 16px;
+  }
+  .bp-header { text-align: center; border-bottom: 2px solid #7c3aed; padding-bottom: 12px; margin-bottom: 12px; }
+  .bp-title { font-size: 20px; font-weight: 800; color: #7c3aed; font-family: 'Orbitron', monospace; }
+  .bp-subtitle { font-size: 11px; color: #666; margin-top: 2px; }
+  .bp-info { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; font-size: 12px; }
+  .bp-info-block p { margin-bottom: 2px; }
+  .bp-info-block strong { color: #333; }
+  .bp-info-block span { color: #666; }
+  .bp-table { width: 100%; border-collapse: collapse; margin-bottom: 12px; font-size: 12px; }
+  .bp-table th { background: #f3f0ff; color: #7c3aed; padding: 6px; text-align: left; font-size: 10px; text-transform: uppercase; }
+  .bp-table td { padding: 6px; border-bottom: 1px solid #eee; }
+  .bp-totals { border-top: 1px solid #ddd; padding-top: 8px; font-size: 12px; }
+  .bp-total-row { display: flex; justify-content: space-between; margin-bottom: 3px; color: #555; }
+  .bp-total-row.grand { font-weight: 800; color: #111; font-size: 14px; border-top: 2px solid #7c3aed; padding-top: 6px; margin-top: 4px; }
+  .bp-footer { text-align: center; margin-top: 14px; font-size: 10px; color: #999; border-top: 1px solid #eee; padding-top: 10px; }
+
+  /* ── TOAST ── */
+  #toast {
+    position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%) translateY(20px);
+    background: var(--surface2); border: 1px solid var(--border);
+    color: var(--text); padding: 10px 20px; border-radius: 30px;
+    font-size: 13px; z-index: 999; opacity: 0;
+    transition: all 0.3s; pointer-events: none; white-space: nowrap;
+  }
+  #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* ── SETUP SCREEN ── */
+  .setup-screen {
+    min-height: 100vh; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; padding: 24px;
+    background: radial-gradient(ellipse at top, rgba(124,58,237,0.15) 0%, transparent 70%);
+  }
+  .setup-logo { font-family: var(--font-display); font-size: 18px; letter-spacing: 2px; margin-bottom: 6px;
+    background: linear-gradient(135deg, #7c3aed, #06b6d4); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .setup-sub { font-size: 12px; color: var(--muted); margin-bottom: 32px; text-align: center; }
+  .setup-card {
+    width: 100%; max-width: 420px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 18px; padding: 24px;
+  }
+  .setup-step { font-size: 11px; color: var(--accent2); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 12px; }
+  .setup-desc { font-size: 13px; color: var(--muted); margin-bottom: 20px; line-height: 1.6; }
+  .setup-code {
+    background: #0d1117; border: 1px solid var(--border);
+    border-radius: 8px; padding: 12px; font-family: var(--font-mono);
+    font-size: 11px; color: #79c0ff; margin-bottom: 20px;
+    white-space: pre-wrap; word-break: break-all;
+  }
+
+  /* ── EMPTY STATE ── */
+  .empty-state { text-align: center; padding: 40px 20px; color: var(--muted); }
+  .empty-icon { font-size: 40px; margin-bottom: 12px; }
+  .empty-text { font-size: 14px; margin-bottom: 6px; color: var(--text); }
+  .empty-sub { font-size: 12px; }
+
+  /* ── CUSTOMER LIST ── */
+  .customer-item {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 12px; margin-bottom: 8px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .customer-name { font-size: 14px; font-weight: 600; }
+  .customer-phone { font-family: var(--font-mono); font-size: 12px; color: var(--muted); }
+
+  .chip {
+    display: inline-block; background: rgba(124,58,237,0.15);
+    border: 1px solid rgba(124,58,237,0.3); color: var(--accent);
+    font-size: 10px; padding: 2px 8px; border-radius: 20px; margin: 2px;
+  }
+
+  .divider { height: 1px; background: var(--border); margin: 16px 0; }
+
+  @media print {
+    body * { visibility: hidden; }
+    .bill-preview, .bill-preview * { visibility: visible; }
+    .bill-preview { position: fixed; top: 0; left: 0; width: 100%; }
+  }
+</style>
+</head>
+<body>
+
+<!-- SETUP SCREEN -->
+<div id="setupScreen" class="setup-screen">
+  <div class="setup-logo">⚡ ELEXYS</div>
+  <div class="setup-sub">Billing System — Electronics Project Kits</div>
+  <div class="setup-card">
+    <div class="setup-step">Firebase Setup Required</div>
+    <div class="setup-desc">
+      To store bills in Firebase, paste your Firebase config below. 
+      Create a free project at <strong>console.firebase.google.com</strong>, 
+      then go to <strong>Project Settings → Your Apps → Web App → Config</strong>.
+    </div>
+    <div class="setup-code">// Example Firebase config:
+{
+  apiKey: "AIzaSy...",
+  authDomain: "my-app.firebaseapp.com",
+  projectId: "my-app-12345",
+  storageBucket: "my-app.appspot.com",
+  messagingSenderId: "123456789",
+  appId: "1:123:web:abc..."
+}</div>
+    <div class="form-group">
+      <label class="form-label">Paste Firebase Config (JSON)</label>
+      <textarea id="firebaseConfigInput" class="form-input" rows="6" placeholder='{"apiKey":"...","projectId":"...",...}'></textarea>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Your Business Name</label>
+      <input id="businessNameInput" class="form-input" type="text" placeholder="Elexys Technologies" value="Elexys Technologies"/>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Your Address / City</label>
+      <input id="businessAddrInput" class="form-input" type="text" placeholder="Malegaon, Nashik, Maharashtra"/>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Phone / WhatsApp</label>
+      <input id="businessPhoneInput" class="form-input" type="text" placeholder="+91 87961 68099"/>
+    </div>
+    <button class="btn btn-primary" onclick="initFirebase()">⚡ Connect & Launch App</button>
+    <div style="text-align:center;margin-top:12px;">
+      <button class="btn btn-sm btn-outline" onclick="launchDemo()" style="width:100%">🧪 Try Demo Mode (no Firebase)</button>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="mainApp" style="display:none;">
+
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <div class="topbar-logo">⚡ ELEXYS BILLING</div>
+    <div class="topbar-actions">
+      <button class="btn btn-sm btn-cyan" onclick="showPage('new')">+ New Bill</button>
+    </div>
+  </div>
+
+  <!-- DASHBOARD PAGE -->
+  <div id="page-dashboard" class="page active">
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-label">Total Bills</div>
+        <div class="stat-value" id="statTotal">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Revenue</div>
+        <div class="stat-value green" id="statRevenue">₹0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">This Month</div>
+        <div class="stat-value amber" id="statMonth">₹0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Pending</div>
+        <div class="stat-value amber" id="statPending">0</div>
+      </div>
+    </div>
+
+    <div class="section-header">
+      <div class="section-title">Recent Bills</div>
+      <button class="btn btn-sm btn-outline" onclick="showPage('bills')">View All</button>
+    </div>
+    <div id="recentBills"></div>
+  </div>
+
+  <!-- BILLS PAGE -->
+  <div id="page-bills" class="page">
+    <div class="section-header">
+      <div class="section-title">All Bills</div>
+      <input class="form-input" id="billSearch" type="text" placeholder="Search..." style="width:130px;padding:7px 10px;font-size:12px;" oninput="filterBills()"/>
+    </div>
+    <div id="allBillsList"></div>
+  </div>
+
+  <!-- NEW BILL PAGE -->
+  <div id="page-new" class="page">
+    <div class="section-title" style="margin-bottom:16px;">Create New Bill</div>
+
+    <!-- Customer -->
+    <div class="form-group">
+      <label class="form-label">Customer Name *</label>
+      <input id="custName" class="form-input" type="text" placeholder="Customer full name"/>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Phone</label>
+        <input id="custPhone" class="form-input" type="tel" placeholder="+91 XXXXX"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Payment</label>
+        <select id="payStatus" class="form-select">
+          <option value="pending">Pending</option>
+          <option value="paid">Paid</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Notes (optional)</label>
+      <input id="billNotes" class="form-input" type="text" placeholder="e.g. YouTube Kit #12, Arduino Uno"/>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- Add Items -->
+    <div class="section-title" style="margin-bottom:12px;">Items</div>
+    <div class="form-row-3" style="margin-bottom:8px;">
+      <div class="form-group" style="margin:0;">
+        <input id="itemName" class="form-input" type="text" placeholder="Item / Kit name"/>
+      </div>
+      <div class="form-group" style="margin:0;">
+        <input id="itemQty" class="form-input" type="number" placeholder="Qty" min="1" value="1"/>
+      </div>
+      <div class="form-group" style="margin:0;">
+        <input id="itemPrice" class="form-input" type="number" placeholder="₹ Price" min="0"/>
+      </div>
+    </div>
+    <button class="btn btn-outline btn-sm" style="width:100%;margin-bottom:14px;" onclick="addItem()">+ Add Item</button>
+
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:14px;min-height:60px;" id="itemsArea">
+      <div class="empty-state" style="padding:12px 0;" id="noItemsMsg">
+        <div style="font-size:11px;color:var(--muted);">No items added yet</div>
+      </div>
+      <table class="items-table" id="itemsTable" style="display:none;">
+        <thead>
+          <tr>
+            <th>Item</th><th>Qty</th><th>Price</th><th>Total</th><th></th>
+          </tr>
+        </thead>
+        <tbody id="itemsBody"></tbody>
+      </table>
+    </div>
+
+    <div class="total-box">
+      <div class="total-row"><span>Subtotal</span><span id="subtotalDisplay">₹0.00</span></div>
+      <div class="total-row">
+        <span>GST
+          <select id="gstRate" class="form-select" style="display:inline;width:auto;padding:2px 6px;font-size:12px;" onchange="recalcTotals()">
+            <option value="0">No GST</option>
+            <option value="5">5%</option>
+            <option value="12">12%</option>
+            <option value="18">18%</option>
+            <option value="28">28%</option>
+          </select>
+        </span>
+        <span id="gstDisplay">₹0.00</span>
+      </div>
+      <div class="total-row">
+        <span>Discount ₹</span>
+        <input id="discountAmt" class="form-input" type="number" min="0" placeholder="0"
+          style="width:80px;padding:4px 8px;font-size:13px;text-align:right;" oninput="recalcTotals()"/>
+      </div>
+      <div class="total-row final"><span>Grand Total</span><span id="grandTotalDisplay">₹0.00</span></div>
+    </div>
+
+    <button class="btn btn-primary" onclick="saveBill()">💾 Save Bill</button>
+  </div>
+
+  <!-- CUSTOMERS PAGE -->
+  <div id="page-customers" class="page">
+    <div class="section-header">
+      <div class="section-title">Customers</div>
+    </div>
+    <div id="customersList"></div>
+  </div>
+
+  <!-- BOTTOM NAV -->
+  <div class="bottom-nav">
+    <button class="nav-btn active" id="nav-dashboard" onclick="showPage('dashboard')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+      Dashboard
+    </button>
+    <button class="nav-btn" id="nav-bills" onclick="showPage('bills')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+      Bills
+    </button>
+    <button class="nav-btn" id="nav-new" onclick="showPage('new')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+      New Bill
+    </button>
+    <button class="nav-btn" id="nav-customers" onclick="showPage('customers')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      Customers
+    </button>
+  </div>
+</div>
+
+<!-- BILL DETAIL MODAL -->
+<div id="billModal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">BILL DETAILS</div>
+    <div id="billModalContent"></div>
+    <div style="display:flex;gap:8px;margin-top:10px;">
+      <button class="btn btn-outline" style="flex:1;" onclick="closeBillModal()">Close</button>
+      <button class="btn btn-cyan" style="flex:1;" onclick="printBill()">🖨️ Print</button>
+      <button class="btn btn-primary" style="flex:1;" onclick="shareBillWhatsApp()">WhatsApp</button>
+    </div>
+    <div style="margin-top:8px;">
+      <button class="btn btn-sm" style="width:100%;background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);color:#ef4444;" onclick="deleteBill()">🗑️ Delete Bill</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<!-- Firebase SDKs -->
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, query, orderBy } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+// ── STATE ──
+let db = null;
+let bills = [];
+let items = [];
+let currentBillId = null;
+let demoMode = false;
+let businessInfo = {};
+
+// expose to window
+window._firebase = { initializeApp, getFirestore, collection, addDoc, getDocs, deleteDoc, doc, query, orderBy };
+
+// ── SETUP ──
+window.initFirebase = async function() {
+  const raw = document.getElementById('firebaseConfigInput').value.trim();
+  const name = document.getElementById('businessNameInput').value.trim() || 'Elexys Technologies';
+  const addr = document.getElementById('businessAddrInput').value.trim();
+  const phone = document.getElementById('businessPhoneInput').value.trim();
+
+  if (!raw) { showToast('⚠️ Please paste your Firebase config'); return; }
+
+  let config;
+  try {
+    // Allow JS object notation too
+    config = JSON.parse(raw.replace(/(\w+):/g, '"$1":').replace(/'/g, '"'));
+  } catch(e) {
+    try { config = eval('('+raw+')'); } catch(e2) {
+      showToast('❌ Invalid config. Check format.'); return;
+    }
+  }
+
+  try {
+    const app = initializeApp(config);
+    db = getFirestore(app);
+    businessInfo = { name, addr, phone };
+    localStorage.setItem('elexys_config', JSON.stringify(config));
+    localStorage.setItem('elexys_biz', JSON.stringify(businessInfo));
+    launchApp();
+  } catch(e) {
+    showToast('❌ Firebase error: ' + e.message);
+  }
+};
+
+window.launchDemo = function() {
+  demoMode = true;
+  businessInfo = {
+    name: document.getElementById('businessNameInput').value || 'Elexys Technologies',
+    addr: document.getElementById('businessAddrInput').value || 'Malegaon, Nashik',
+    phone: document.getElementById('businessPhoneInput').value || '+91 87961 68099'
+  };
+  bills = [
+    { id:'demo1', billNo:'ELX-001', customer:'Rahul Sharma', phone:'9876543210', date:'2026-06-10', items:[{name:'Arduino Uno Kit',qty:1,price:499,total:499}], subtotal:499, gst:0, discount:0, grand:499, status:'paid', notes:'Kit #5' },
+    { id:'demo2', billNo:'ELX-002', customer:'Priya Patel', phone:'9123456789', date:'2026-06-12', items:[{name:'ESP32 IoT Kit',qty:2,price:799,total:1598}], subtotal:1598, gst:287.64, discount:0, grand:1885.64, status:'pending', notes:'Kit #12' },
+  ];
+  launchApp();
+};
+
+function launchApp() {
+  document.getElementById('setupScreen').style.display = 'none';
+  document.getElementById('mainApp').style.display = 'block';
+  loadBills();
+}
+
+// ── LOAD BILLS ──
+async function loadBills() {
+  if (!demoMode && db) {
+    try {
+      const q = query(collection(db, 'bills'), orderBy('date','desc'));
+      const snap = await getDocs(q);
+      bills = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    } catch(e) {
+      showToast('⚠️ Could not load bills: ' + e.message);
+    }
+  }
+  renderDashboard();
+  renderAllBills();
+  renderCustomers();
+}
+
+// ── DASHBOARD ──
+function renderDashboard() {
+  const total = bills.length;
+  const revenue = bills.reduce((s, b) => s + (b.grand || 0), 0);
+  const now = new Date();
+  const monthBills = bills.filter(b => {
+    const d = new Date(b.date);
+    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+  });
+  const monthRev = monthBills.reduce((s,b) => s+(b.grand||0), 0);
+  const pending = bills.filter(b => b.status === 'pending').length;
+
+  document.getElementById('statTotal').textContent = total;
+  document.getElementById('statRevenue').textContent = '₹' + revenue.toLocaleString('en-IN', {minimumFractionDigits:0});
+  document.getElementById('statMonth').textContent = '₹' + monthRev.toLocaleString('en-IN', {minimumFractionDigits:0});
+  document.getElementById('statPending').textContent = pending;
+
+  const recent = bills.slice(0, 5);
+  const el = document.getElementById('recentBills');
+  if (recent.length === 0) {
+    el.innerHTML = `<div class="empty-state"><div class="empty-icon">🧾</div><div class="empty-text">No bills yet</div><div class="empty-sub">Tap "+ New Bill" to create your first bill</div></div>`;
+  } else {
+    el.innerHTML = recent.map(b => billCardHTML(b)).join('');
+  }
+}
+
+function billCardHTML(b) {
+  const badge = b.status === 'paid'
+    ? `<span class="badge badge-paid">PAID</span>`
+    : `<span class="badge badge-pending">PENDING</span>`;
+  return `<div class="bill-card" onclick="openBill('${b.id}')">
+    <div class="bill-card-top">
+      <div>
+        <div class="bill-number">${b.billNo}</div>
+        <div class="bill-customer">${b.customer}</div>
+      </div>
+      <div style="text-align:right;">
+        <div class="bill-amount">₹${(b.grand||0).toLocaleString('en-IN',{minimumFractionDigits:2})}</div>
+        ${badge}
+      </div>
+    </div>
+    <div class="bill-meta">
+      <span>${b.phone || ''}</span>
+      <span>${formatDate(b.date)}</span>
+    </div>
+  </div>`;
+}
+
+function renderAllBills() {
+  const el = document.getElementById('allBillsList');
+  if (bills.length === 0) {
+    el.innerHTML = `<div class="empty-state"><div class="empty-icon">🧾</div><div class="empty-text">No bills yet</div></div>`;
+    return;
+  }
+  el.innerHTML = bills.map(b => billCardHTML(b)).join('');
+}
+
+window.filterBills = function() {
+  const q = document.getElementById('billSearch').value.toLowerCase();
+  const filtered = bills.filter(b =>
+    b.customer.toLowerCase().includes(q) ||
+    b.billNo.toLowerCase().includes(q) ||
+    (b.phone||'').includes(q)
+  );
+  const el = document.getElementById('allBillsList');
+  el.innerHTML = filtered.length ? filtered.map(b => billCardHTML(b)).join('') :
+    `<div class="empty-state"><div class="empty-text">No results found</div></div>`;
+};
+
+// ── CUSTOMERS ──
+function renderCustomers() {
+  const map = {};
+  bills.forEach(b => {
+    if (!map[b.customer]) map[b.customer] = { phone: b.phone, count: 0, total: 0 };
+    map[b.customer].count++;
+    map[b.customer].total += (b.grand || 0);
+  });
+  const el = document.getElementById('customersList');
+  const entries = Object.entries(map);
+  if (entries.length === 0) {
+    el.innerHTML = `<div class="empty-state"><div class="empty-icon">👥</div><div class="empty-text">No customers yet</div></div>`;
+    return;
+  }
+  el.innerHTML = entries.map(([name, info]) => `
+    <div class="customer-item">
+      <div>
+        <div class="customer-name">${name}</div>
+        <div class="customer-phone">${info.phone || 'No phone'}</div>
+      </div>
+      <div style="text-align:right;">
+        <div style="font-size:13px;color:var(--green);font-weight:600;">₹${info.total.toLocaleString('en-IN',{minimumFractionDigits:2})}</div>
+        <div style="font-size:11px;color:var(--muted);">${info.count} bill${info.count>1?'s':''}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ── ITEMS ──
+window.addItem = function() {
+  const name = document.getElementById('itemName').value.trim();
+  const qty = parseInt(document.getElementById('itemQty').value) || 1;
+  const price = parseFloat(document.getElementById('itemPrice').value) || 0;
+  if (!name) { showToast('⚠️ Enter item name'); return; }
+  if (price <= 0) { showToast('⚠️ Enter valid price'); return; }
+  items.push({ name, qty, price, total: qty * price });
+  document.getElementById('itemName').value = '';
+  document.getElementById('itemPrice').value = '';
+  document.getElementById('itemQty').value = 1;
+  renderItems();
+  recalcTotals();
+};
+
+function renderItems() {
+  const tbody = document.getElementById('itemsBody');
+  const table = document.getElementById('itemsTable');
+  const noMsg = document.getElementById('noItemsMsg');
+  if (items.length === 0) { table.style.display='none'; noMsg.style.display='block'; tbody.innerHTML=''; return; }
+  noMsg.style.display='none'; table.style.display='table';
+  tbody.innerHTML = items.map((it, i) => `
+    <tr>
+      <td>${it.name}</td>
+      <td>${it.qty}</td>
+      <td>₹${it.price.toFixed(2)}</td>
+      <td>₹${it.total.toFixed(2)}</td>
+      <td><button class="del-btn" onclick="removeItem(${i})">✕</button></td>
+    </tr>
+  `).join('');
+}
+
+window.removeItem = function(i) {
+  items.splice(i, 1);
+  renderItems();
+  recalcTotals();
+};
+
+window.recalcTotals = function() {
+  const subtotal = items.reduce((s, it) => s + it.total, 0);
+  const gstPct = parseFloat(document.getElementById('gstRate').value) || 0;
+  const gst = subtotal * gstPct / 100;
+  const disc = parseFloat(document.getElementById('discountAmt').value) || 0;
+  const grand = subtotal + gst - disc;
+  document.getElementById('subtotalDisplay').textContent = '₹' + subtotal.toFixed(2);
+  document.getElementById('gstDisplay').textContent = '₹' + gst.toFixed(2);
+  document.getElementById('grandTotalDisplay').textContent = '₹' + Math.max(0, grand).toFixed(2);
+};
+
+// ── SAVE BILL ──
+window.saveBill = async function() {
+  const customer = document.getElementById('custName').value.trim();
+  if (!customer) { showToast('⚠️ Enter customer name'); return; }
+  if (items.length === 0) { showToast('⚠️ Add at least one item'); return; }
+
+  const subtotal = items.reduce((s,it) => s+it.total, 0);
+  const gstPct = parseFloat(document.getElementById('gstRate').value) || 0;
+  const gst = subtotal * gstPct / 100;
+  const discount = parseFloat(document.getElementById('discountAmt').value) || 0;
+  const grand = Math.max(0, subtotal + gst - discount);
+  const billNo = 'ELX-' + String(bills.length + 1).padStart(3,'0');
+  const billData = {
+    billNo, customer,
+    phone: document.getElementById('custPhone').value.trim(),
+    status: document.getElementById('payStatus').value,
+    notes: document.getElementById('billNotes').value.trim(),
+    items: [...items],
+    subtotal, gstPct, gst, discount, grand,
+    date: new Date().toISOString().split('T')[0],
+    createdAt: new Date().toISOString()
+  };
+
+  try {
+    if (!demoMode && db) {
+      const ref = await addDoc(collection(db, 'bills'), billData);
+      bills.unshift({ id: ref.id, ...billData });
+    } else {
+      bills.unshift({ id: 'demo' + Date.now(), ...billData });
+    }
+    showToast('✅ Bill saved!');
+    items = [];
+    renderItems();
+    recalcTotals();
+    document.getElementById('custName').value = '';
+    document.getElementById('custPhone').value = '';
+    document.getElementById('billNotes').value = '';
+    document.getElementById('payStatus').value = 'pending';
+    document.getElementById('discountAmt').value = '';
+    renderDashboard();
+    renderAllBills();
+    renderCustomers();
+    showPage('bills');
+  } catch(e) {
+    showToast('❌ Save failed: ' + e.message);
+  }
+};
+
+// ── BILL MODAL ──
+window.openBill = function(id) {
+  currentBillId = id;
+  const b = bills.find(x => x.id === id);
+  if (!b) return;
+  const badge = b.status === 'paid' ? `<span class="badge badge-paid">PAID</span>` : `<span class="badge badge-pending">PENDING</span>`;
+  document.getElementById('billModalContent').innerHTML = `
+    <div class="bill-preview" id="printableBill">
+      <div class="bp-header">
+        <div class="bp-title">⚡ ${businessInfo.name || 'Elexys Technologies'}</div>
+        <div class="bp-subtitle">${businessInfo.addr || ''} | ${businessInfo.phone || ''}</div>
+        <div class="bp-subtitle" style="margin-top:4px;color:#7c3aed;font-weight:600;">INVOICE</div>
+      </div>
+      <div class="bp-info">
+        <div class="bp-info-block">
+          <p><strong>Bill To:</strong></p>
+          <p><strong>${b.customer}</strong></p>
+          <p><span>${b.phone || ''}</span></p>
+          ${b.notes ? `<p><span>${b.notes}</span></p>` : ''}
+        </div>
+        <div class="bp-info-block" style="text-align:right;">
+          <p><strong>Bill No:</strong> ${b.billNo}</p>
+          <p><strong>Date:</strong> ${formatDate(b.date)}</p>
+          <p>${b.status === 'paid' ? '<span style="color:#10b981;font-weight:700;">✓ PAID</span>' : '<span style="color:#f59e0b;font-weight:700;">⏳ PENDING</span>'}</p>
+        </div>
+      </div>
+      <table class="bp-table">
+        <thead><tr><th>Item</th><th>Qty</th><th>Rate</th><th>Amount</th></tr></thead>
+        <tbody>
+          ${b.items.map(it => `<tr><td>${it.name}</td><td>${it.qty}</td><td>₹${it.price.toFixed(2)}</td><td>₹${it.total.toFixed(2)}</td></tr>`).join('')}
+        </tbody>
+      </table>
+      <div class="bp-totals">
+        <div class="bp-total-row"><span>Subtotal</span><span>₹${b.subtotal.toFixed(2)}</span></div>
+        ${b.gst > 0 ? `<div class="bp-total-row"><span>GST (${b.gstPct}%)</span><span>₹${b.gst.toFixed(2)}</span></div>` : ''}
+        ${b.discount > 0 ? `<div class="bp-total-row"><span>Discount</span><span>-₹${b.discount.toFixed(2)}</span></div>` : ''}
+        <div class="bp-total-row grand"><span>TOTAL</span><span>₹${b.grand.toFixed(2)}</span></div>
+      </div>
+      <div class="bp-footer">Thank you for your business! | ${businessInfo.name || 'Elexys Technologies'}</div>
+    </div>
+  `;
+  document.getElementById('billModal').classList.add('open');
+};
+
+window.closeBillModal = function() {
+  document.getElementById('billModal').classList.remove('open');
+  currentBillId = null;
+};
+
+window.printBill = function() { window.print(); };
+
+window.shareBillWhatsApp = function() {
+  const b = bills.find(x => x.id === currentBillId);
+  if (!b) return;
+  const itemLines = b.items.map(it => `• ${it.name} x${it.qty} = ₹${it.total.toFixed(2)}`).join('\n');
+  const msg = `🧾 *Invoice from ${businessInfo.name || 'Elexys Technologies'}*\n\nBill No: ${b.billNo}\nDate: ${formatDate(b.date)}\nCustomer: ${b.customer}\n\n*Items:*\n${itemLines}\n\nSubtotal: ₹${b.subtotal.toFixed(2)}${b.gst>0?'\nGST: ₹'+b.gst.toFixed(2):''}${b.discount>0?'\nDiscount: -₹'+b.discount.toFixed(2):''}\n*Total: ₹${b.grand.toFixed(2)}*\n\nStatus: ${b.status.toUpperCase()}\n\nThank you! 🙏`;
+  const phone = b.phone ? b.phone.replace(/\D/g,'') : '';
+  window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`);
+};
+
+window.deleteBill = async function() {
+  if (!confirm('Delete this bill? This cannot be undone.')) return;
+  try {
+    if (!demoMode && db) {
+      await window._firebase.deleteDoc(window._firebase.doc(db,'bills', currentBillId));
+    }
+    bills = bills.filter(b => b.id !== currentBillId);
+    closeBillModal();
+    renderDashboard();
+    renderAllBills();
+    renderCustomers();
+    showToast('🗑️ Bill deleted');
+  } catch(e) {
+    showToast('❌ Delete failed');
+  }
+};
+
+// ── NAVIGATION ──
+window.showPage = function(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  const nb = document.getElementById('nav-' + name);
+  if (nb) nb.classList.add('active');
+  if (name === 'new') { items = []; renderItems(); recalcTotals(); }
+};
+
+// ── UTILS ──
+function formatDate(d) {
+  if (!d) return '';
+  const dt = new Date(d + 'T00:00:00');
+  return dt.toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' });
+}
+
+window.showToast = function(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2800);
+};
+
+// ── AUTO-RESTORE ──
+window.addEventListener('DOMContentLoaded', () => {
+  const saved = localStorage.getItem('elexys_config');
+  const savedBiz = localStorage.getItem('elexys_biz');
+  if (saved && savedBiz) {
+    try {
+      const config = JSON.parse(saved);
+      businessInfo = JSON.parse(savedBiz);
+      const app = initializeApp(config);
+      db = window._firebase.getFirestore(app);
+      launchApp();
+    } catch(e) { /* show setup */ }
+  }
+});
+
+// close modal on backdrop click
+document.getElementById('billModal').addEventListener('click', function(e) {
+  if (e.target === this) closeBillModal();
+});
+</script>
+</body>
+</html>
