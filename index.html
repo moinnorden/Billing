@@ -117,6 +117,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--fb);min-height:100
 .badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;letter-spacing:0.5px;}
 .bpaid{background:rgba(16,185,129,0.15);color:var(--green);border:1px solid rgba(16,185,129,0.3);}
 .bpend{background:rgba(245,158,11,0.15);color:var(--amber);border:1px solid rgba(245,158,11,0.3);}
+.bpart{background:rgba(6,182,212,0.15);color:var(--accent2);border:1px solid rgba(6,182,212,0.3);}
 .bcanc{background:rgba(239,68,68,0.15);color:var(--red);border:1px solid rgba(239,68,68,0.3);}
 
 /* PRODUCT CARD */
@@ -327,6 +328,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--fb);min-height:100
     <div class="tabs">
       <button class="tab active" onclick="setBF('all',this)">All</button>
       <button class="tab" onclick="setBF('paid',this)">Paid</button>
+      <button class="tab" onclick="setBF('partial',this)">Partial</button>
       <button class="tab" onclick="setBF('pending',this)">Pending</button>
       <button class="tab" onclick="setBF('cancelled',this)">Cancelled</button>
     </div>
@@ -352,9 +354,10 @@ body{background:var(--bg);color:var(--text);font-family:var(--fb);min-height:100
       <div class="fr2">
         <div class="fg"><label class="fl">Bill Date *</label><input id="f-date" class="fi" type="date"/></div>
         <div class="fg"><label class="fl">Status</label>
-          <select id="f-status" class="fs">
-            <option value="pending">Pending</option>
-            <option value="paid">Paid</option>
+          <select id="f-status" class="fs" onchange="onStatusChange()">
+            <option value="pending">Pending (Unpaid)</option>
+            <option value="partial">Partially Paid</option>
+            <option value="paid">Fully Paid</option>
             <option value="cancelled">Cancelled</option>
           </select>
         </div>
@@ -404,6 +407,12 @@ body{background:var(--bg);color:var(--text);font-family:var(--fb);min-height:100
           style="width:80px;padding:4px 8px;font-size:13px;text-align:right;" oninput="recalc()"/>
       </div>
       <div class="totrow fin"><span>Grand Total</span><span id="d-grand">₹0.00</span></div>
+      <div class="totrow" style="margin-top:6px;padding-top:6px;border-top:1px dashed var(--border);">
+        <span>Amount Received (₹)</span>
+        <input id="f-paid" class="fi" type="number" min="0" placeholder="0"
+          style="width:100px;padding:4px 8px;font-size:13px;text-align:right;" oninput="onPaidInput()"/>
+      </div>
+      <div class="totrow"><span>Balance Due</span><span id="d-due" style="color:var(--amber);font-weight:700;">₹0.00</span></div>
     </div>
 
     <button class="btn bp bfw" style="margin-bottom:10px;" onclick="saveBill()">💾 Save Bill</button>
@@ -494,7 +503,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--fb);min-height:100
       <button class="btn bp" onclick="waBill()">📲 WhatsApp</button>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;">
-      <button class="btn ba bsm" onclick="toggleStatus()">🔄 Toggle Status</button>
+      <button class="btn ba bsm" onclick="toggleStatus()" title="Quick toggle between Paid and Pending. Use Edit Bill for partial payments.">🔄 Paid/Pending</button>
       <button class="btn bd bsm" onclick="deleteBill()">🗑️ Delete</button>
     </div>
   </div>
@@ -640,12 +649,12 @@ function renderDash(){
   const total=bills.reduce((s,b)=>s+b.grand,0);
   const now=new Date();
   const mbs=bills.filter(b=>{const d=new Date(b.date);return d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear();});
-  const pbs=bills.filter(b=>b.status==='pending');
+  const pbs=bills.filter(b=>b.status==='pending'||b.status==='partial');
   set('st-rev',fmt(total));
   set('st-bills',bills.length);
   set('st-month',fmt(mbs.reduce((s,b)=>s+b.grand,0)));
   set('st-monthsub',mbs.length+' bills');
-  set('st-pend',fmt(pbs.reduce((s,b)=>s+b.grand,0)));
+  set('st-pend',fmt(pbs.reduce((s,b)=>s+billDue(b),0)));
   set('st-pendsub',pbs.length+' bills');
   const el=document.getElementById('recentList');
   const r=bills.slice(0,6);
@@ -668,8 +677,13 @@ window.renderBills=function(){
   el.innerHTML=list.length?list.map(billCard).join(''):emptyHTML('🔍','No results','Try different search or filter');
 };
 
+// ── PAYMENT HELPERS (backward-compatible with older bills saved before this field existed) ──
+function billPaid(b){return b.paid!=null?b.paid:(b.status==='paid'?b.grand:0);}
+function billDue(b){return b.due!=null?b.due:Math.max(0,b.grand-billPaid(b));}
+
 function billCard(b){
-  const badge=b.status==='paid'?'<span class="badge bpaid">PAID</span>':b.status==='cancelled'?'<span class="badge bcanc">CANCELLED</span>':'<span class="badge bpend">PENDING</span>';
+  const due=billDue(b);
+  const badge=b.status==='paid'?'<span class="badge bpaid">PAID</span>':b.status==='cancelled'?'<span class="badge bcanc">CANCELLED</span>':b.status==='partial'?'<span class="badge bpart">PARTIAL</span>':'<span class="badge bpend">PENDING</span>';
   return `<div class="bc2" onclick="openBill('${b.id}')">
     <div class="bc2-top">
       <div><div class="bno">${b.billNo||''}</div><div class="bcust">${b.customer}</div></div>
@@ -681,6 +695,7 @@ function billCard(b){
     </div>
     ${b.notes?`<div style="font-size:10px;color:var(--muted);margin-top:3px;">📝 ${b.notes}</div>`:''}
     ${b.paymode?`<div style="font-size:10px;color:var(--accent2);margin-top:2px;">💳 ${b.paymode}</div>`:''}
+    ${(b.status==='partial'||b.status==='pending')&&due>0?`<div style="font-size:10px;color:var(--amber);margin-top:2px;">⏳ Due: ${fmt(due)}${b.status==='partial'?' (Received: '+fmt(billPaid(b))+')':''}</div>`:''}
   </div>`;
 }
 
@@ -689,7 +704,8 @@ window.openBill=function(id){
   curBillId=id;
   const b=bills.find(x=>x.id===id);
   if(!b)return;
-  const badge=b.status==='paid'?'<span style="color:#10b981;font-weight:700;">✓ PAID</span>':b.status==='cancelled'?'<span style="color:#ef4444;font-weight:700;">CANCELLED</span>':'<span style="color:#f59e0b;font-weight:700;">⏳ PENDING</span>';
+  const due=billDue(b), paidAmt=billPaid(b);
+  const badge=b.status==='paid'?'<span style="color:#10b981;font-weight:700;">✓ PAID</span>':b.status==='cancelled'?'<span style="color:#ef4444;font-weight:700;">CANCELLED</span>':b.status==='partial'?'<span style="color:#06b6d4;font-weight:700;">◐ PARTIAL</span>':'<span style="color:#f59e0b;font-weight:700;">⏳ PENDING</span>';
   document.getElementById('bmContent').innerHTML=`
     <div class="bprev" id="printBill">
       <div class="bphead">
@@ -722,6 +738,9 @@ window.openBill=function(id){
         ${b.gst>0?`<div class="bptotr"><span>GST (${b.gstPct}%)</span><span>₹${b.gst.toFixed(2)}</span></div>`:''}
         ${b.discount>0?`<div class="bptotr"><span>Discount</span><span>-₹${b.discount.toFixed(2)}</span></div>`:''}
         <div class="bptotr grand"><span>TOTAL</span><span>₹${b.grand.toFixed(2)}</span></div>
+        ${b.status!=='cancelled'&&(paidAmt>0||due>0)?`
+        <div class="bptotr" style="margin-top:5px;padding-top:5px;border-top:1px dashed #ddd;"><span>Amount Received</span><span>₹${paidAmt.toFixed(2)}</span></div>
+        ${due>0?`<div class="bptotr" style="color:#b45309;font-weight:700;"><span>Balance Due</span><span>₹${due.toFixed(2)}</span></div>`:''}`:''}
       </div>
       <div class="bpfoot">${biz.name||'Elexys Technologies'} | Thank you for your business! 🙏</div>
     </div>`;
@@ -740,22 +759,29 @@ window.editBill=function(){
   set2('f-date',b.date); set2('f-status',b.status); set2('f-notes',b.notes||'');
   set2('f-billno',b.billNo||''); set2('f-paymode',b.paymode||'');
   set2('f-gst',b.gstPct||0); set2('f-disc',b.discount||0);
-  bItems=[...b.items]; renderItems(); recalc();
+  const paidAmt=b.paid!=null?b.paid:(b.status==='paid'?b.grand:0);
+  set2('f-paid',paidAmt||'');
+  bItems=[...b.items]; renderItems(); recalc(); syncPaidUI();
   goPage('newbill');
 };
 
 window.toggleStatus=function(){
   const b=bills.find(x=>x.id===curBillId);if(!b)return;
-  const next=b.status==='paid'?'pending':b.status==='pending'?'paid':'pending';
-  b.status=next;
-  if(!demo&&db)window._fb.updateDoc(window._fb.doc(db,'bills',b.id),{status:next});
+  // Cycle Pending → Paid → Pending. For partial payments, use Edit Bill to set the exact amount received.
+  const next=b.status==='paid'?'pending':'paid';
+  const paid=next==='paid'?b.grand:0;
+  const due=Math.max(0,b.grand-paid);
+  b.status=next; b.paid=paid; b.due=due;
+  if(!demo&&db)window._fb.updateDoc(window._fb.doc(db,'bills',b.id),{status:next,paid,due});
   closeBM(); renderAll(); toast('✅ Status → '+next.toUpperCase());
 };
 
 window.waBill=function(){
   const b=bills.find(x=>x.id===curBillId);if(!b)return;
+  const due=billDue(b), paidAmt=billPaid(b);
   const lines=b.items.map(it=>`• ${it.name} ×${it.qty} = ₹${it.total.toFixed(2)}`).join('\n');
-  const msg=`🧾 *Invoice — ${biz.name||'Elexys Technologies'}*\n\nBill No: *${b.billNo||''}*\nDate: ${fmtDate(b.date)}\nCustomer: *${b.customer}*\n\n*Items:*\n${lines}\n\nSubtotal: ₹${b.subtotal.toFixed(2)}${b.gst>0?'\nGST ('+b.gstPct+'%): ₹'+b.gst.toFixed(2):''}${b.discount>0?'\nDiscount: -₹'+b.discount.toFixed(2):''}\n*Total: ₹${b.grand.toFixed(2)}*\n\nStatus: *${b.status.toUpperCase()}*${b.paymode?'\nPayment: '+b.paymode:''}\n\nThank you! 🙏\n— ${biz.name}`;
+  const payLine=b.status==='cancelled'?'':(paidAmt>0||due>0)?`\nAmount Received: ₹${paidAmt.toFixed(2)}${due>0?'\n*Balance Due: ₹'+due.toFixed(2)+'*':''}`:'';
+  const msg=`🧾 *Invoice — ${biz.name||'Elexys Technologies'}*\n\nBill No: *${b.billNo||''}*\nDate: ${fmtDate(b.date)}\nCustomer: *${b.customer}*\n\n*Items:*\n${lines}\n\nSubtotal: ₹${b.subtotal.toFixed(2)}${b.gst>0?'\nGST ('+b.gstPct+'%): ₹'+b.gst.toFixed(2):''}${b.discount>0?'\nDiscount: -₹'+b.discount.toFixed(2):''}\n*Total: ₹${b.grand.toFixed(2)}*${payLine}\n\nStatus: *${b.status.toUpperCase()}*${b.paymode?'\nPayment: '+b.paymode:''}\n\nThank you! 🙏\n— ${biz.name}`;
   const ph=(b.phone||'').replace(/\D/g,'');
   window.open('https://wa.me/'+ph+'?text='+encodeURIComponent(msg));
 };
@@ -775,8 +801,8 @@ window.openNewBill=function(){
   set2('nbTitle','New Bill');
   ['f-cust','f-phone','f-city','f-notes','f-billno'].forEach(x=>set2(x,''));
   set2('f-date',today()); set2('f-status','pending'); set2('f-gst','0'); set2('f-disc','');
-  set2('f-paymode',''); set2('f-pick','');
-  bItems=[]; renderItems(); recalc();
+  set2('f-paymode',''); set2('f-pick',''); set2('f-paid','');
+  bItems=[]; renderItems(); recalc(); syncPaidUI();
   goPage('newbill');
 };
 
@@ -819,6 +845,65 @@ window.recalc=function(){
   set('d-sub','₹'+sub.toFixed(2));
   set('d-gst','₹'+gst.toFixed(2));
   set('d-grand','₹'+grand.toFixed(2));
+  // Keep Amount Received in sync with status for Paid/Pending/Cancelled.
+  // For Partial, leave whatever the user typed (clamped to the grand total).
+  const st=v('f-status');
+  if(st==='paid'){set2('f-paid',grand.toFixed(2));}
+  else if(st==='pending'||st==='cancelled'){set2('f-paid','0');}
+  else{
+    let paid=parseFloat(v('f-paid'))||0;
+    if(paid>grand)set2('f-paid',grand.toFixed(2));
+  }
+  syncPaidUI();
+  updateDue();
+};
+
+// Grand total shown might have been recalculated already; read from the live inputs
+// (not the formatted d-grand text) so this stays accurate even before recalc() runs.
+function currentGrand(){
+  const sub=bItems.reduce((s,it)=>s+it.total,0);
+  const gp=parseFloat(v('f-gst'))||0;
+  const gst=sub*gp/100;
+  const disc=parseFloat(v('f-disc'))||0;
+  return Math.max(0,sub+gst-disc);
+}
+
+function updateDue(){
+  const grand=currentGrand();
+  const paid=parseFloat(v('f-paid'))||0;
+  const due=Math.max(0,grand-paid);
+  set('d-due','₹'+due.toFixed(2));
+}
+
+function syncPaidUI(){
+  const st=v('f-status');
+  const el=document.getElementById('f-paid');
+  if(!el)return;
+  el.disabled=(st==='paid'||st==='pending'||st==='cancelled');
+}
+
+window.onStatusChange=function(){
+  const st=v('f-status');
+  const grand=currentGrand();
+  if(st==='paid'){set2('f-paid',grand.toFixed(2));}
+  else if(st==='pending'||st==='cancelled'){set2('f-paid','0');}
+  else if(!v('f-paid')||parseFloat(v('f-paid'))<=0){set2('f-paid','');}
+  syncPaidUI();
+  updateDue();
+};
+
+window.onPaidInput=function(){
+  const grand=currentGrand();
+  let paid=parseFloat(v('f-paid'))||0;
+  if(paid<0){paid=0;set2('f-paid','0');}
+  if(paid>grand){paid=grand;set2('f-paid',grand.toFixed(2));}
+  const st=v('f-status');
+  if(st!=='cancelled'){
+    if(paid<=0)set2('f-status','pending');
+    else if(grand>0&&paid>=grand)set2('f-status','paid');
+    else set2('f-status','partial');
+  }
+  updateDue();
 };
 
 window.saveBill=async function(){
@@ -830,13 +915,21 @@ window.saveBill=async function(){
   const gst=sub*gstPct/100;
   const discount=parseFloat(v('f-disc'))||0;
   const grand=Math.max(0,sub+gst-discount);
+  let paid=Math.min(parseFloat(v('f-paid'))||0,grand);
+  let status=v('f-status');
+  if(status!=='cancelled'){
+    status = paid<=0?'pending':(grand>0&&paid>=grand?'paid':'partial');
+  }else{
+    paid=0;
+  }
+  const due=Math.max(0,grand-paid);
   const editId=v('editId');
   const custBillNo=v('f-billno').trim();
   const data={
     customer,phone:v('f-phone').trim(),city:v('f-city').trim(),
-    date:v('f-date'),status:v('f-status'),notes:v('f-notes').trim(),
+    date:v('f-date'),status,notes:v('f-notes').trim(),
     paymode:v('f-paymode'),items:[...bItems],
-    subtotal:sub,gstPct,gst,discount,grand,updatedAt:new Date().toISOString()
+    subtotal:sub,gstPct,gst,discount,grand,paid,due,updatedAt:new Date().toISOString()
   };
   try{
     if(editId){
@@ -940,7 +1033,7 @@ window.renderCustomers=function(){
     if(!map[b.customer])map[b.customer]={phone:b.phone,city:b.city,cnt:0,total:0,paid:0,last:b.date};
     map[b.customer].cnt++;
     map[b.customer].total+=b.grand;
-    if(b.status==='paid')map[b.customer].paid+=b.grand;
+    if(b.status!=='cancelled')map[b.customer].paid+=billPaid(b);
     if(b.date>map[b.customer].last)map[b.customer].last=b.date;
   });
   let entries=Object.entries(map);
@@ -986,7 +1079,7 @@ function renderAnalytics(){
       const key=d.getFullYear()+'-'+(d.getMonth()+1).toString().padStart(2,'0');
       const label=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()]+' '+String(d.getFullYear()).slice(2);
       const pb=bills.filter(b=>b.date.startsWith(key));
-      periods.push({label,bills:pb,rev:pb.reduce((s,b)=>s+b.grand,0),paid:pb.filter(b=>b.status==='paid').reduce((s,b)=>s+b.grand,0),pend:pb.filter(b=>b.status==='pending').reduce((s,b)=>s+b.grand,0)});
+      periods.push({label,bills:pb,rev:pb.reduce((s,b)=>s+b.grand,0),paid:pb.filter(b=>b.status!=='cancelled').reduce((s,b)=>s+billPaid(b),0),pend:pb.filter(b=>b.status!=='cancelled').reduce((s,b)=>s+billDue(b),0)});
     }
   }else if(anPeriod==='quarterly'){
     set('ctitle','Revenue — Last 4 Quarters');
@@ -995,14 +1088,14 @@ function renderAnalytics(){
       const yr=d.getFullYear(),qn=Math.floor(d.getMonth()/3);
       const qm=[qn*3,qn*3+1,qn*3+2];
       const pb=bills.filter(b=>{const bd=new Date(b.date);return bd.getFullYear()===yr&&qm.includes(bd.getMonth());});
-      periods.push({label:`Q${qn+1} ${yr}`,bills:pb,rev:pb.reduce((s,b)=>s+b.grand,0),paid:pb.filter(b=>b.status==='paid').reduce((s,b)=>s+b.grand,0),pend:pb.filter(b=>b.status==='pending').reduce((s,b)=>s+b.grand,0)});
+      periods.push({label:`Q${qn+1} ${yr}`,bills:pb,rev:pb.reduce((s,b)=>s+b.grand,0),paid:pb.filter(b=>b.status!=='cancelled').reduce((s,b)=>s+billPaid(b),0),pend:pb.filter(b=>b.status!=='cancelled').reduce((s,b)=>s+billDue(b),0)});
     }
   }else{
     set('ctitle','Revenue — Last 4 Years');
     for(let i=3;i>=0;i--){
       const yr=now.getFullYear()-i;
       const pb=bills.filter(b=>b.date.startsWith(String(yr)));
-      periods.push({label:String(yr),bills:pb,rev:pb.reduce((s,b)=>s+b.grand,0),paid:pb.filter(b=>b.status==='paid').reduce((s,b)=>s+b.grand,0),pend:pb.filter(b=>b.status==='pending').reduce((s,b)=>s+b.grand,0)});
+      periods.push({label:String(yr),bills:pb,rev:pb.reduce((s,b)=>s+b.grand,0),paid:pb.filter(b=>b.status!=='cancelled').reduce((s,b)=>s+billPaid(b),0),pend:pb.filter(b=>b.status!=='cancelled').reduce((s,b)=>s+billDue(b),0)});
     }
   }
 
