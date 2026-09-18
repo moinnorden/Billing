@@ -761,7 +761,7 @@ window.editBill=function(){
   set2('f-gst',b.gstPct||0); set2('f-disc',b.discount||0);
   const paidAmt=b.paid!=null?b.paid:(b.status==='paid'?b.grand:0);
   set2('f-paid',paidAmt||'');
-  bItems=[...b.items]; renderItems(); recalc(); syncPaidUI();
+  bItems=[...b.items]; renderItems(); recalc();
   goPage('newbill');
 };
 
@@ -802,7 +802,7 @@ window.openNewBill=function(){
   ['f-cust','f-phone','f-city','f-notes','f-billno'].forEach(x=>set2(x,''));
   set2('f-date',today()); set2('f-status','pending'); set2('f-gst','0'); set2('f-disc','');
   set2('f-paymode',''); set2('f-pick',''); set2('f-paid','');
-  bItems=[]; renderItems(); recalc(); syncPaidUI();
+  bItems=[]; renderItems(); recalc();
   goPage('newbill');
 };
 
@@ -845,16 +845,9 @@ window.recalc=function(){
   set('d-sub','₹'+sub.toFixed(2));
   set('d-gst','₹'+gst.toFixed(2));
   set('d-grand','₹'+grand.toFixed(2));
-  // Keep Amount Received in sync with status for Paid/Pending/Cancelled.
-  // For Partial, leave whatever the user typed (clamped to the grand total).
-  const st=v('f-status');
-  if(st==='paid'){set2('f-paid',grand.toFixed(2));}
-  else if(st==='pending'||st==='cancelled'){set2('f-paid','0');}
-  else{
-    let paid=parseFloat(v('f-paid'))||0;
-    if(paid>grand)set2('f-paid',grand.toFixed(2));
-  }
-  syncPaidUI();
+  // Never overwrite what the user typed in Amount Received — just keep it within range.
+  let paid=parseFloat(v('f-paid'))||0;
+  if(paid>grand)set2('f-paid',grand.toFixed(2));
   updateDue();
 };
 
@@ -875,20 +868,15 @@ function updateDue(){
   set('d-due','₹'+due.toFixed(2));
 }
 
-function syncPaidUI(){
-  const st=v('f-status');
-  const el=document.getElementById('f-paid');
-  if(!el)return;
-  el.disabled=(st==='paid'||st==='pending'||st==='cancelled');
-}
-
+// The Amount Received field is always manually editable — status is just a label
+// that follows the amount you type (or you can set it directly, e.g. Cancelled).
 window.onStatusChange=function(){
   const st=v('f-status');
   const grand=currentGrand();
-  if(st==='paid'){set2('f-paid',grand.toFixed(2));}
-  else if(st==='pending'||st==='cancelled'){set2('f-paid','0');}
-  else if(!v('f-paid')||parseFloat(v('f-paid'))<=0){set2('f-paid','');}
-  syncPaidUI();
+  // Only auto-fill as a convenience when the field is still empty; never overwrite
+  // an amount the user already typed.
+  if(st==='paid'&&!v('f-paid')){set2('f-paid',grand.toFixed(2));}
+  else if(st==='pending'&&!v('f-paid')){set2('f-paid','0');}
   updateDue();
 };
 
