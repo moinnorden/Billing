@@ -905,6 +905,15 @@ window.openBill=function(id){
 window.importCatalogToFirebase=async function(){
   if(demo||!db){toast('⚠️ Log in with your Firebase account first, then try Import again');return;}
   const btn=document.getElementById('importCatalogBtn');
+  const origLabel0=btn.textContent;
+  btn.disabled=true; btn.textContent='⏳ Checking live catalog...';
+  // Always re-fetch the current products fresh from Firestore first, so anything
+  // added directly (via +Add, another device, or straight in the Firebase console)
+  // since the last login is accounted for — never relying on a stale in-memory list.
+  try{
+    const ps=await window._fb.getDocs(window._fb.collection(db,'products'));
+    products=ps.docs.map(d=>({id:d.id,...d.data()}));
+  }catch(e){btn.disabled=false;btn.textContent=origLabel0;toast('⚠️ Could not read Firebase: '+e.message);return;}
   const already=new Set(products.filter(p=>p.code).map(p=>p.code.toLowerCase()));
   const alreadyNames=new Set(products.map(p=>(p.name||'').toLowerCase()));
   const toAdd=SEED_PRODUCTS.filter(sp=>{
@@ -912,9 +921,9 @@ window.importCatalogToFirebase=async function(){
     const nameDup=alreadyNames.has(sp.name.toLowerCase());
     return !codeDup&&!nameDup;
   });
-  if(toAdd.length===0){toast('✅ Catalog already up to date — nothing new to import');return;}
-  if(!confirm(`Import ${toAdd.length} product(s) into your live Firebase catalog now?`))return;
-  btn.disabled=true; const origLabel=btn.textContent; btn.textContent='⏳ Importing 0/'+toAdd.length+'...';
+  if(toAdd.length===0){btn.disabled=false;btn.textContent=origLabel0;renderProducts();fillProductPicker();toast('✅ Catalog already up to date — nothing new to import');return;}
+  if(!confirm(`Import ${toAdd.length} product(s) into your live Firebase catalog now?`)){btn.disabled=false;btn.textContent=origLabel0;return;}
+  btn.textContent='⏳ Importing 0/'+toAdd.length+'...';
   let done=0, failed=0;
   for(const sp of toAdd){
     try{
@@ -925,7 +934,7 @@ window.importCatalogToFirebase=async function(){
     }catch(e){failed++;}
     btn.textContent='⏳ Importing '+(done+failed)+'/'+toAdd.length+'...';
   }
-  btn.disabled=false; btn.textContent=origLabel;
+  btn.disabled=false; btn.textContent=origLabel0;
   renderProducts(); fillProductPicker();
   toast(failed?`✅ Imported ${done}, ⚠️ ${failed} failed`:`✅ Imported ${done} product(s) to Firebase`);
 };
