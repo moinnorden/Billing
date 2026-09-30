@@ -449,7 +449,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--fb);min-height:100
       <svg class="sicon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
       <input class="fi" id="psearch" placeholder="Search products..." oninput="renderProducts()" style="padding-left:34px;"/>
     </div>
-    <button class="btn bo bfw bsm" id="importCatalogBtn" style="margin-bottom:10px;" onclick="importCatalogToFirebase()">☁️ Import 81 Elexys Products to Firebase</button>
+    <button class="btn bo bfw bsm" id="importCatalogBtn" style="margin-bottom:10px;" onclick="importCatalogToFirebase()">☁️ Sync Products from elexysprojects.com</button>
     <div id="prodList"></div>
   </div>
 
@@ -619,6 +619,55 @@ const DEFAULT_FB_CONFIG={
   messagingSenderId:"886993439553",
   appId:"1:886993439553:web:3fc4eefefc2847a72b2fc0"
 };
+
+// ── WEBSITE'S FIREBASE CONFIG (elexysprojects.com's own catalog database —
+// separate project from the billing app's. Used ONLY to read live products
+// for the Import button; the billing app never writes here. ──
+const WEBSITE_FB_CONFIG={
+  apiKey:"AIzaSyC97I-QSoDqSLfUR3Vt6gYSM5VrXAJb2G4",
+  authDomain:"elexys-technologies.firebaseapp.com",
+  databaseURL:"https://elexys-technologies-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId:"elexys-technologies",
+  storageBucket:"elexys-technologies.firebasestorage.app",
+  messagingSenderId:"1002855081911",
+  appId:"1:1002855081911:web:6bafab1a4fea559ff9ea32"
+};
+let websiteDb=null;
+function getWebsiteDb(){
+  if(websiteDb)return websiteDb;
+  try{
+    const wapp=initializeApp(WEBSITE_FB_CONFIG,'websiteCatalog');
+    websiteDb=getFirestore(wapp);
+  }catch(e){/* already initialized or blocked — ignore, importer falls back */}
+  return websiteDb;
+}
+// Pulls every product from the website's own Firestore and maps whichever
+// field names it actually uses onto {name, code, cat, price}. The exact
+// schema wasn't confirmed in advance, so this checks the common variants.
+async function fetchWebsiteProducts(){
+  const wdb=getWebsiteDb();
+  if(!wdb)return null;
+  const tryCollections=['products','projects','catalog'];
+  for(const cname of tryCollections){
+    try{
+      const snap=await getDocs(collection(wdb,cname));
+      if(snap.empty)continue;
+      const out=[];
+      snap.forEach(d=>{
+        const x=d.data();
+        const name=x.name||x.title||x.projectName||x.productName||x.projectTitle||'';
+        if(!name)return;
+        let price=x.price!=null?x.price:(x.cost!=null?x.cost:0);
+        if(typeof price==='string')price=Number(price.replace(/[^0-9.]/g,''))||0;
+        const code=x.code||x.videoNo||x.videoNumber||x.sku||x.productCode||'';
+        const cat=x.cat||x.category||x.tag||x.type||'General';
+        out.push({name:String(name).trim(),code:String(code).trim(),cat:String(cat).trim(),price:Math.round(Number(price)||0),_docId:d.id});
+      });
+      if(out.length)return out;
+    }catch(e){/* try next collection name / rules may block this one */}
+  }
+  return null;
+}
 
 // ── STATE ──
 let db=null, auth=null, demo=false;
@@ -914,14 +963,31 @@ window.importCatalogToFirebase=async function(){
     const ps=await window._fb.getDocs(window._fb.collection(db,'products'));
     products=ps.docs.map(d=>({id:d.id,...d.data()}));
   }catch(e){btn.disabled=false;btn.textContent=origLabel0;toast('⚠️ Could not read Firebase: '+e.message);return;}
+
+  // Prefer the LIVE list straight from elexysprojects.com's own database —
+  // this is what makes brand-new products (added after this app was built)
+  // show up automatically. Only fall back to the fixed 81-item snapshot if
+  // the live site's database can't be reached (e.g. its security rules
+  // don't allow outside reads).
+  let source=await fetchWebsiteProducts();
+  let sourceIsLive=true;
+  if(!source||source.length===0){source=SEED_PRODUCTS;sourceIsLive=false;}
+
   const already=new Set(products.filter(p=>p.code).map(p=>p.code.toLowerCase()));
   const alreadyNames=new Set(products.map(p=>(p.name||'').toLowerCase()));
-  const toAdd=SEED_PRODUCTS.filter(sp=>{
+  const toAdd=source.filter(sp=>{
     const codeDup=sp.code&&already.has(sp.code.toLowerCase());
     const nameDup=alreadyNames.has(sp.name.toLowerCase());
     return !codeDup&&!nameDup;
   });
-  if(toAdd.length===0){btn.disabled=false;btn.textContent=origLabel0;renderProducts();fillProductPicker();toast('✅ Catalog already up to date — nothing new to import');return;}
+  if(toAdd.length===0){
+    btn.disabled=false;btn.textContent=origLabel0;renderProducts();fillProductPicker();
+    toast(sourceIsLive?'✅ Live catalog already up to date — nothing new to import':'✅ Up to date with the known 81 — live site unreachable, add new ones via screenshot');
+    return;
+  }
+  if(!sourceIsLive){
+    toast('⚠️ Could not reach live website catalog — using saved 81-product list instead');
+  }
   if(!confirm(`Import ${toAdd.length} product(s) into your live Firebase catalog now?`)){btn.disabled=false;btn.textContent=origLabel0;return;}
   btn.textContent='⏳ Importing 0/'+toAdd.length+'...';
   let done=0, failed=0;
