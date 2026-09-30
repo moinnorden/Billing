@@ -227,10 +227,32 @@ body{background:var(--bg);color:var(--text);font-family:var(--fb);min-height:100
 .setupcode{background:#0d1117;border:1px solid var(--border);border-radius:8px;padding:11px;
   font-family:var(--fm);font-size:10px;color:#79c0ff;margin-bottom:14px;white-space:pre-wrap;word-break:break-all;line-height:1.6;}
 
+/* BILL SIGNATURE + TERMS */
+.bpbottom{display:flex;justify-content:space-between;align-items:flex-end;gap:14px;margin-top:14px;break-inside:avoid;page-break-inside:avoid;}
+.bpterms{flex:1;font-size:9px;color:#555;line-height:1.55;}
+.bpterms h4{font-size:9px;color:#7c3aed;letter-spacing:1px;text-transform:uppercase;margin-bottom:3px;}
+.bpterms div{white-space:pre-line;}
+.bpsign{width:38%;min-width:130px;text-align:center;font-size:9px;color:#444;}
+.bpsign .forco{font-weight:700;margin-bottom:2px;}
+.bpsign img{display:block;margin:0 auto;max-width:100%;max-height:60px;object-fit:contain;}
+.bpsign .sline{border-top:1px solid #333;margin-top:4px;padding-top:3px;font-weight:600;}
+.bpsign .sgap{height:46px;}
+
+/* SIGNATURE SETTINGS */
+.sigpad{background:#fff;border-radius:8px;border:1px dashed var(--border2);width:100%;height:140px;touch-action:none;display:block;}
+.sigprev{background:#fff;border-radius:8px;padding:6px;text-align:center;min-height:50px;margin-bottom:8px;}
+.sigprev img{max-height:70px;max-width:100%;}
+
+/* PRINT AREA (a clean copy of the bill is printed, so no blank 2nd page) */
+#printArea{display:none;}
 @media print{
-  body>*{visibility:hidden;}
-  .bprev,.bprev *{visibility:visible;}
-  .bprev{position:fixed;top:0;left:0;width:100%;padding:20px;}
+  @page{size:A4;margin:10mm;}
+  html,body{background:#fff!important;height:auto!important;min-height:0!important;overflow:visible!important;}
+  body>*:not(#printArea){display:none!important;}
+  #printArea{display:block!important;position:static!important;}
+  #printArea .bprev{position:static!important;width:100%!important;margin:0!important;border-radius:0!important;padding:0!important;box-shadow:none!important;}
+  #printArea *{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+  #printArea tr,#printArea .bptots,#printArea .bpfoot{break-inside:avoid;page-break-inside:avoid;}
 }
 </style>
 </head>
@@ -296,6 +318,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--fb);min-height:100
     <div class="topbar-logo">⚡ ELEXYS BILLING</div>
     <div style="display:flex;gap:7px;align-items:center;">
       <button class="btn bc bsm" onclick="openNewBill()">+ Bill</button>
+      <button class="btn bo bsm" onclick="openSigSet()" title="Signature &amp; Terms">✍️</button>
       <button class="btn bo bsm" onclick="doLogout()" title="Logout">⏻</button>
     </div>
   </div>
@@ -488,6 +511,37 @@ body{background:var(--bg);color:var(--text);font-family:var(--fb);min-height:100
   </div>
 </div>
 
+<!-- ════ SIGNATURE & TERMS MODAL ════ -->
+<div id="sigModal" class="moverlay" onclick="if(event.target===this)closeSigSet()" style="z-index:300;">
+  <div class="modal">
+    <div class="mhandle"></div>
+    <div class="mtitle">Signature &amp; Terms</div>
+    <div class="fg"><label class="fl">Signature</label>
+      <div class="sigprev" id="sigPrev"></div>
+      <canvas id="sigPad" class="sigpad"></canvas>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:8px;">
+        <button class="btn bo bsm" onclick="sigClear()">Clear pad</button>
+        <button class="btn bc bsm" onclick="sigUseDrawn()">Use drawn</button>
+        <button class="btn bo bsm" onclick="document.getElementById('sigFile').click()">Upload</button>
+      </div>
+      <input type="file" id="sigFile" accept="image/*" style="display:none" onchange="sigUpload(this)"/>
+      <button class="btn bd bsm bfw" style="margin-top:6px;" onclick="sigRemove()">Remove signature</button>
+    </div>
+    <div class="fg"><label class="fl">Signatory name / title (printed under signature)</label>
+      <input id="sigName" class="fi" placeholder="e.g. Shaikh — Proprietor"/></div>
+    <div class="fg"><label class="fl">Terms &amp; Conditions (one per line)</label>
+      <textarea id="sigTerms" class="fi fta" rows="6"></textarea></div>
+    <div class="fg" style="display:flex;gap:16px;font-size:13px;">
+      <label><input type="checkbox" id="sigShowSign" checked/> Show signature</label>
+      <label><input type="checkbox" id="sigShowTerms" checked/> Show terms</label>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+      <button class="btn bo" onclick="closeSigSet()">Cancel</button>
+      <button class="btn bp" onclick="saveSigSet()">💾 Save</button>
+    </div>
+  </div>
+</div>
+
 <!-- ════ BILL MODAL ════ -->
 <div id="billModal" class="moverlay" onclick="if(event.target===this)closeBM()">
   <div class="modal">
@@ -506,6 +560,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--fb);min-height:100
       <button class="btn ba bsm" onclick="toggleStatus()" title="Quick toggle between Paid and Pending. Use Edit Bill for partial payments.">🔄 Paid/Pending</button>
       <button class="btn bd bsm" onclick="deleteBill()">🗑️ Delete</button>
     </div>
+    <button class="btn bo bsm bfw" style="margin-top:8px;" onclick="openSigSet()">✍️ Signature &amp; Terms</button>
   </div>
 </div>
 
@@ -617,7 +672,7 @@ window.launchDemo=function(){
 };
 
 function saveBiz(){
-  biz={name:v('bizName')||'Elexys Technologies',addr:v('bizAddr')||'',phone:v('bizPhone')||'',gst:v('bizGST')||''};
+  biz={...biz,name:v('bizName')||'Elexys Technologies',addr:v('bizAddr')||'',phone:v('bizPhone')||'',gst:v('bizGST')||''};
   localStorage.setItem('elx_biz2',JSON.stringify(biz));
 }
 
@@ -742,13 +797,100 @@ window.openBill=function(id){
         <div class="bptotr" style="margin-top:5px;padding-top:5px;border-top:1px dashed #ddd;"><span>Amount Received</span><span>₹${paidAmt.toFixed(2)}</span></div>
         ${due>0?`<div class="bptotr" style="color:#b45309;font-weight:700;"><span>Balance Due</span><span>₹${due.toFixed(2)}</span></div>`:''}`:''}
       </div>
+      ${(biz.showTerms!==false&&biz.terms)||(biz.showSign!==false&&(biz.sign||biz.signName))?`
+      <div class="bpbottom">
+        <div class="bpterms">${biz.showTerms!==false&&biz.terms?`<h4>Terms &amp; Conditions</h4><div>${escH(biz.terms)}</div>`:''}</div>
+        ${biz.showSign!==false?`<div class="bpsign">
+          <div class="forco">For ${escH(biz.name||'Elexys Technologies')}</div>
+          ${biz.sign?`<img src="${biz.sign}" alt="Signature"/>`:'<div class="sgap"></div>'}
+          <div class="sline">${escH(biz.signName||'Authorized Signatory')}</div>
+        </div>`:''}
+      </div>`:''}
       <div class="bpfoot">${biz.name||'Elexys Technologies'} | Thank you for your business! 🙏</div>
     </div>`;
   document.getElementById('billModal').classList.add('open');
 };
 
+
+// ── SIGNATURE & TERMS ──
+const DEFAULT_TERMS='1. Goods once sold will not be taken back or exchanged.\n2. Warranty is as per the manufacturer / component terms only.\n3. Physical damage, burnt or wrongly connected parts are not covered.\n4. Payment is due as per the agreed date; balance must be cleared before delivery.\n5. All disputes are subject to Malegaon (Nashik) jurisdiction.';
+function escH(t){return String(t==null?'':t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+let tmpSign=null, sigDrawn=false;
+function sigPrevRender(){
+  const el=document.getElementById('sigPrev');
+  el.innerHTML=tmpSign?`<img src="${tmpSign}" alt="Signature"/>`:'<span style="color:#999;font-size:11px;">No signature set</span>';
+}
+function sigInitPad(){
+  const c=document.getElementById('sigPad');
+  const r=c.getBoundingClientRect(), ratio=window.devicePixelRatio||1;
+  c.width=Math.max(1,r.width*ratio); c.height=Math.max(1,r.height*ratio);
+  const x=c.getContext('2d'); x.scale(ratio,ratio);
+  x.lineWidth=2.2; x.lineCap='round'; x.lineJoin='round'; x.strokeStyle='#111';
+  sigDrawn=false;
+  if(c._bound)return; c._bound=true;
+  let down=false;
+  const pos=e=>{const b=c.getBoundingClientRect();return {x:e.clientX-b.left,y:e.clientY-b.top};};
+  c.addEventListener('pointerdown',e=>{down=true;c.setPointerCapture(e.pointerId);const p=pos(e);const g=c.getContext('2d');g.beginPath();g.moveTo(p.x,p.y);});
+  c.addEventListener('pointermove',e=>{if(!down)return;const p=pos(e);const g=c.getContext('2d');g.lineTo(p.x,p.y);g.stroke();sigDrawn=true;});
+  const up=()=>{down=false;};
+  c.addEventListener('pointerup',up); c.addEventListener('pointercancel',up);
+}
+window.openSigSet=function(){
+  tmpSign=biz.sign||null;
+  set2('sigName',biz.signName||'');
+  set2('sigTerms',biz.terms!=null?biz.terms:DEFAULT_TERMS);
+  document.getElementById('sigShowSign').checked=biz.showSign!==false;
+  document.getElementById('sigShowTerms').checked=biz.showTerms!==false;
+  document.getElementById('sigModal').classList.add('open');
+  sigPrevRender();
+  setTimeout(sigInitPad,60);
+};
+window.closeSigSet=function(){document.getElementById('sigModal').classList.remove('open');};
+window.sigClear=function(){sigInitPad();};
+window.sigUseDrawn=function(){
+  if(!sigDrawn){toast('⚠️ Draw your signature first');return;}
+  const c=document.getElementById('sigPad');
+  const t=document.createElement('canvas'); t.width=c.width; t.height=c.height;
+  const g=t.getContext('2d'); g.drawImage(c,0,0);
+  tmpSign=t.toDataURL('image/png'); sigPrevRender(); toast('✅ Signature ready — tap Save');
+};
+window.sigUpload=function(inp){
+  const f=inp.files&&inp.files[0]; if(!f)return;
+  const rd=new FileReader();
+  rd.onload=()=>{
+    const img=new Image();
+    img.onload=()=>{
+      const max=500, k=Math.min(1,max/Math.max(img.width,img.height));
+      const t=document.createElement('canvas'); t.width=Math.round(img.width*k); t.height=Math.round(img.height*k);
+      const g=t.getContext('2d'); g.drawImage(img,0,0,t.width,t.height);
+      tmpSign=t.toDataURL('image/png'); sigPrevRender(); toast('✅ Signature loaded — tap Save');
+    };
+    img.src=rd.result;
+  };
+  rd.readAsDataURL(f); inp.value='';
+};
+window.sigRemove=function(){tmpSign=null;sigPrevRender();sigInitPad();};
+window.saveSigSet=function(){
+  biz.sign=tmpSign||''; biz.signName=v('sigName').trim();
+  biz.terms=v('sigTerms').trim();
+  biz.showSign=document.getElementById('sigShowSign').checked;
+  biz.showTerms=document.getElementById('sigShowTerms').checked;
+  try{localStorage.setItem('elx_biz2',JSON.stringify(biz));}catch(e){toast('⚠️ Storage full — use a smaller signature');return;}
+  closeSigSet(); toast('✅ Saved');
+  if(curBillId&&document.getElementById('billModal').classList.contains('open'))openBill(curBillId);
+};
+
 window.closeBM=function(){document.getElementById('billModal').classList.remove('open');curBillId=null;};
-window.printBill=function(){window.print();};
+window.printBill=function(){
+  const src=document.getElementById('printBill');
+  if(!src){toast('⚠️ Open a bill first');return;}
+  let pa=document.getElementById('printArea');
+  if(!pa){pa=document.createElement('div');pa.id='printArea';document.body.appendChild(pa);}
+  pa.innerHTML=src.outerHTML.replace('id="printBill"','');
+  const done=()=>{pa.innerHTML='';window.removeEventListener('afterprint',done);};
+  window.addEventListener('afterprint',done);
+  setTimeout(()=>window.print(),50);
+};
 
 window.editBill=function(){
   const b=bills.find(x=>x.id===curBillId);if(!b)return;
@@ -1151,6 +1293,7 @@ window.addEventListener('DOMContentLoaded',async()=>{
   if(!biz||!biz.name){
     biz={name:'Elexys Technologies',addr:'Malegaon, Dist. Nashik, Maharashtra',phone:'+91 87961 68099',gst:''};
   }
+  if(biz.terms==null)biz.terms=DEFAULT_TERMS;
   document.getElementById('f-date').value=today();
 
   // Use whatever config was saved before, otherwise fall back to the embedded default
