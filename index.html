@@ -449,6 +449,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--fb);min-height:100
       <svg class="sicon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
       <input class="fi" id="psearch" placeholder="Search products..." oninput="renderProducts()" style="padding-left:34px;"/>
     </div>
+    <button class="btn bo bfw bsm" id="importCatalogBtn" style="margin-bottom:10px;" onclick="importCatalogToFirebase()">☁️ Import 81 Elexys Products to Firebase</button>
     <div id="prodList"></div>
   </div>
 
@@ -628,6 +629,91 @@ let bItems=[], billFilter='all', anPeriod='monthly';
 // expose fb ops
 window._fb={initializeApp,getFirestore,collection,addDoc,getDocs,updateDoc,deleteDoc,doc,query,orderBy,getAuth,signInWithEmailAndPassword,signOut};
 
+const SEED_PRODUCTS=[
+  {name:'GSM Based Fire Security System',code:'ELX_027',cat:'Fire & Safety',price:7999},
+  {name:'3 Phase Automatic Phase Selection System Using Arduino',code:'ELX_026',cat:'Electrical',price:7999},
+  {name:'Automatic Railway Gate Operating System Using Arduino',code:'ELX_071',cat:'Automation',price:4999},
+  {name:'GSM Based Underground Cable Fault Detection',code:'ELX_016',cat:'GSM',price:7999},
+  {name:'Temperature Based Speed Control of DC Motor',code:'ELX_018',cat:'Motor',price:4999},
+  {name:'Smart Water Supply Control System Using Arduino',code:'ELX_009',cat:'Automation',price:5999},
+  {name:'IoT Based 3 Phase Power Monitoring System',code:'ELX_062',cat:'IoT',price:19999},
+  {name:'Schmitt Trigger Using Op Amp',code:'ELX_078',cat:'Power Electronics',price:1999},
+  {name:'GSM Based Saline Monitoring System',code:'ELX_025',cat:'GSM',price:7999},
+  {name:'IoT Based Smart Water Heater Using ESP8266',code:'ELX_855',cat:'ESP32',price:6999},
+  {name:'IoT Based 3 Phase Transformer Monitoring System',code:'ELX_043',cat:'Transformer',price:19999},
+  {name:'Automatic Irrigation System',code:'ELX_068',cat:'Agriculture',price:4999},
+  {name:'RFID Based Smart Parking System',code:'ELX_029',cat:'RFID',price:7999},
+  {name:'IoT Based Transformer Health Monitoring',code:'ELX_020',cat:'Transformer',price:8499},
+  {name:'RFID Based Online Attendance System',code:'ELX_022',cat:'RFID',price:7499},
+  {name:'GSM Based Auto Load Sharing Transformer',code:'ELX_013',cat:'Transformer',price:8999},
+  {name:'Weather Station Using P10 Display',code:'ELX_044',cat:'Embedded',price:19999},
+  {name:'IoT Based Agriculture with Air Quality Control System',code:'ELX_058',cat:'Agriculture',price:11999},
+  {name:'IoT Based Transformer Monitoring System',code:'ELX_002',cat:'Transformer',price:8999},
+  {name:'IoT Based Wireless Mobile Charger',code:'ELX_073',cat:'Wireless Energy',price:6999},
+  {name:'IoT Soil Quality Monitoring Using ESP8266',code:'ELX_038',cat:'ESP32',price:16999},
+  {name:'Auto Load Sharing of Transformer',code:'ELX_SM03',cat:'Transformer',price:2999},
+  {name:'Frequency Based Induction Motor Protection System',code:'ELX_SM01',cat:'Motor',price:2999},
+  {name:'RFID & GSM Based Attendance System',code:'ELX_023',cat:'RFID',price:7999},
+  {name:'Auto Load Sharing Transformers',code:'ELX_012',cat:'Transformer',price:7999},
+  {name:'IoT Based Water Quality & Dissolve Oxygen Monitoring',code:'ELX_065',cat:'IoT',price:24999},
+  {name:'IoT Based Speed Control of DC Motor',code:'ELX_057',cat:'Motor',price:4999},
+  {name:'IoT Based Farm Management System',code:'ELX_074',cat:'Agriculture',price:34999},
+  {name:'GSM Based Smart Irrigation System Using Arduino',code:'ELX_037',cat:'GSM',price:8999},
+  {name:'IoT Agriculture Monitoring Using ESP32',code:'ELX_066',cat:'ESP32',price:6999},
+  {name:'PID Controlled Heating System',code:'ELX_SM04',cat:'Power Electronics',price:2999},
+  {name:'IoT Based Multiple Tank level Monitoring System Using Load Cell',code:'ELX_036',cat:'IoT',price:8999},
+  {name:'Fire Fighting Robot',code:'ELX_098',cat:'Robotics',price:9499},
+  {name:'IoT Based Water Quality Monitoring Using ESP32',code:'ELX_051',cat:'ESP32',price:9999},
+  {name:'3 Phase Fault Detection System Using NodeMCU',code:'ELX_049',cat:'Electrical',price:11999},
+  {name:'Underground Wireless Coil Fault Detection Robot',code:'ELX_068',cat:'Robotics',price:13999},
+  {name:'IoT Based Weighing Scale',code:'ELX_010',cat:'Embedded',price:5999},
+  {name:'IoT Based Wireless Vehicle Charging Station',code:'ELX_048',cat:'Wireless Energy',price:8999},
+  {name:'Temperature Controlled Smart Water Heater',code:'ELX_SM02',cat:'Simulation',price:2999},
+  {name:'Timer Based Smart Battery Charging System',code:'ELX_054',cat:'Embedded',price:6999},
+  {name:'Transformer Oil Level Measurement',code:'ELX_SM08',cat:'Simulation',price:2999},
+  {name:'Transformer Animal Protection System',code:'ELX_SM07',cat:'Simulation',price:2999},
+  {name:'Gas Leakage Safety System',code:'ELX_061',cat:'GSM',price:4999},
+  {name:'LPG Gas Leakage Detection and Home Security System',code:'ELX_048',cat:'GSM',price:5999},
+  {name:'Smart Dual Pump Management System',code:'ELX_072',cat:'Automation',price:5499},
+  {name:'Astable Multivibrator Using Timer 555',code:'ELX_069',cat:'Electrical',price:1999},
+  {name:'IoT Based Transformer Monitoring Using ESP32',code:'ELX_067',cat:'Transformer',price:7999},
+  {name:'IoT Based Solar String Fault Detection System',code:'ELX_014',cat:'Solar',price:9999},
+  {name:'Wireless Vehicle Charging System',code:'ELX_008',cat:'Wireless Energy',price:7999},
+  {name:'GSM Based Transformer Fault Detection System',code:'',cat:'GSM',price:7999},
+  {name:'Wireless Energy Transmission System',code:'ELX_019',cat:'Wireless Energy',price:5999},
+  {name:'IoT Based Agriculture NPK Monitoring Using ESP8266',code:'ELX_039',cat:'Agriculture',price:19999},
+  {name:'Speed & Direction Control of DC Motor Using IR Remote',code:'ELX_017',cat:'Motor',price:4999},
+  {name:'Alcohol Detection and Automatic Car Engine Locking System Using Arduino',code:'ELX_028',cat:'Automation',price:6999},
+  {name:'Solar Based Irrigation System',code:'ELX_033',cat:'Solar',price:6999},
+  {name:'IoT Based Engine Health Monitoring System',code:'ELX_052',cat:'IoT',price:9999},
+  {name:'Bidirectional Visitor Counter',code:'ELX_031',cat:'8051',price:3999},
+  {name:'36 Watt Wireless Charging System',code:'ELX_053',cat:'Wireless Energy',price:17999},
+  {name:'IoT Based Agriculture Monitoring System',code:'ELX_007',cat:'Agriculture',price:8999},
+  {name:'IoT Based Agriculture Monitoring',code:'ELX_046',cat:'Agriculture',price:17999},
+  {name:'Automatic Railway Gate Operating System Using 8051',code:'ELX_032',cat:'8051',price:4999},
+  {name:'Solar Powered Wireless Vehicle Charging Station',code:'ELX_050',cat:'Solar',price:9999},
+  {name:'Transformer High Temperature Protection System',code:'ELX_SM06',cat:'Simulation',price:2999},
+  {name:'Timer Based Smart Window & Alarm',code:'ELX_045',cat:'Electrical',price:24999},
+  {name:'IoT Based Advanced Residential Energy Meter',code:'ELX_063',cat:'IoT',price:18999},
+  {name:'IoT Based Weather Station Using ESP8266',code:'ELX_024',cat:'ESP32',price:6999},
+  {name:'Transformer Physical Health Protection System',code:'ELX_030',cat:'Electrical',price:6499},
+  {name:'Fire Security System Using Arduino Flame and Smoke Sensor',code:'ELX_SM05',cat:'Simulation',price:2999},
+  {name:'IoT (4G) Based Agriculture Monitoring System',code:'ELX_056',cat:'Agriculture',price:11999},
+  {name:'3 Phase Fault Detection System Using Arduino',code:'ELX_006',cat:'Electrical',price:7999},
+  {name:'Vehicle Accident Prevention System Using Driver\'s Eye Blink',code:'ELX_034',cat:'Automation',price:6499},
+  {name:'IoT Based Automatic Power Factor Controller',code:'ELX_047',cat:'Power Electronics',price:9999},
+  {name:'Soft Starter for AC Motor',code:'ELX_055',cat:'Motor',price:6999},
+  {name:'IoT Based Motor Monitoring System',code:'ELX_011',cat:'Motor',price:11999},
+  {name:'Home Automation Using Android App',code:'ELX_005',cat:'Automation',price:6999},
+  {name:'Single Phase Square Wave Inverter',code:'ELX_064',cat:'Power Electronics',price:5499},
+  {name:'Underground Cable Fault Detection System',code:'ELX_015',cat:'Electrical',price:6599},
+  {name:'Automatic Fire Extinguisher',code:'ELX_059',cat:'GSM',price:4999},
+  {name:'IoT Based Multiple Solar Panel Monitoring & Fault Detection',code:'ELX_042',cat:'Solar',price:18999},
+  {name:'IoT Based Solar Power Monitoring System',code:'ELX_001',cat:'Solar',price:8999},
+  {name:'Wireless Smart Helmet For Driver Safety',code:'ELX_041',cat:'Wireless Energy',price:9999},
+];
+
+
 // ── SIGN IN ──
 window.doSignIn=async function(){
   const email=v('loginEmail').trim(), pass=v('loginPass');
@@ -669,89 +755,7 @@ window.launchDemo=function(){
     {id:'d5',billNo:'ELX-005',customer:'Rahul Sharma',phone:'9876543210',city:'Pune',date:'2026-03-05',paymode:'UPI',items:[{name:'Power Supply Kit',qty:1,price:599,total:599}],subtotal:599,gstPct:18,gst:107.82,discount:0,grand:706.82,status:'paid',notes:''},
     {id:'d6',billNo:'ELX-006',customer:'Priya Patel',phone:'9123456789',city:'Nashik',date:'2026-02-14',paymode:'UPI',items:[{name:'Arduino Uno Kit',qty:1,price:499,total:499}],subtotal:499,gstPct:18,gst:89.82,discount:0,grand:588.82,status:'paid',notes:''},
   ];
-  products=[
-    {id:'p1',name:'GSM Based Fire Security System',code:'ELX_027',cat:'Fire & Safety',price:7999,stock:10,yt:'',desc:''},
-    {id:'p2',name:'3 Phase Automatic Phase Selection System Using Arduino',code:'ELX_026',cat:'Electrical',price:7999,stock:10,yt:'',desc:''},
-    {id:'p3',name:'Automatic Railway Gate Operating System Using Arduino',code:'ELX_071',cat:'Automation',price:4999,stock:10,yt:'',desc:''},
-    {id:'p4',name:'GSM Based Underground Cable Fault Detection',code:'ELX_016',cat:'GSM',price:7999,stock:10,yt:'',desc:''},
-    {id:'p5',name:'Temperature Based Speed Control of DC Motor',code:'ELX_018',cat:'Motor',price:4999,stock:10,yt:'',desc:''},
-    {id:'p6',name:'Smart Water Supply Control System Using Arduino',code:'ELX_009',cat:'Automation',price:5999,stock:10,yt:'',desc:''},
-    {id:'p7',name:'IoT Based 3 Phase Power Monitoring System',code:'ELX_062',cat:'IoT',price:19999,stock:10,yt:'',desc:''},
-    {id:'p8',name:'Schmitt Trigger Using Op Amp',code:'ELX_078',cat:'Power Electronics',price:1999,stock:10,yt:'',desc:''},
-    {id:'p9',name:'GSM Based Saline Monitoring System',code:'ELX_025',cat:'GSM',price:7999,stock:10,yt:'',desc:''},
-    {id:'p10',name:'IoT Based Smart Water Heater Using ESP8266',code:'ELX_855',cat:'ESP32',price:6999,stock:10,yt:'',desc:''},
-    {id:'p11',name:'IoT Based 3 Phase Transformer Monitoring System',code:'ELX_043',cat:'Transformer',price:19999,stock:10,yt:'',desc:''},
-    {id:'p12',name:'Automatic Irrigation System',code:'ELX_068',cat:'Agriculture',price:4999,stock:10,yt:'',desc:''},
-    {id:'p13',name:'RFID Based Smart Parking System',code:'ELX_029',cat:'RFID',price:7999,stock:10,yt:'',desc:''},
-    {id:'p14',name:'IoT Based Transformer Health Monitoring',code:'ELX_020',cat:'Transformer',price:8499,stock:10,yt:'',desc:''},
-    {id:'p15',name:'RFID Based Online Attendance System',code:'ELX_022',cat:'RFID',price:7499,stock:10,yt:'',desc:''},
-    {id:'p16',name:'GSM Based Auto Load Sharing Transformer',code:'ELX_013',cat:'Transformer',price:8999,stock:10,yt:'',desc:''},
-    {id:'p17',name:'Weather Station Using P10 Display',code:'ELX_044',cat:'Embedded',price:19999,stock:10,yt:'',desc:''},
-    {id:'p18',name:'IoT Based Agriculture with Air Quality Control System',code:'ELX_058',cat:'Agriculture',price:11999,stock:10,yt:'',desc:''},
-    {id:'p19',name:'IoT Based Transformer Monitoring System',code:'ELX_002',cat:'Transformer',price:8999,stock:10,yt:'',desc:''},
-    {id:'p20',name:'IoT Based Wireless Mobile Charger',code:'ELX_073',cat:'Wireless Energy',price:6999,stock:10,yt:'',desc:''},
-    {id:'p21',name:'IoT Soil Quality Monitoring Using ESP8266',code:'ELX_038',cat:'ESP32',price:16999,stock:10,yt:'',desc:''},
-    {id:'p22',name:'Auto Load Sharing of Transformer',code:'ELX_SM03',cat:'Transformer',price:2999,stock:10,yt:'',desc:''},
-    {id:'p23',name:'Frequency Based Induction Motor Protection System',code:'ELX_SM01',cat:'Motor',price:2999,stock:10,yt:'',desc:''},
-    {id:'p24',name:'RFID & GSM Based Attendance System',code:'ELX_023',cat:'RFID',price:7999,stock:10,yt:'',desc:''},
-    {id:'p25',name:'Auto Load Sharing Transformers',code:'ELX_012',cat:'Transformer',price:7999,stock:10,yt:'',desc:''},
-    {id:'p26',name:'IoT Based Water Quality & Dissolve Oxygen Monitoring',code:'ELX_065',cat:'IoT',price:24999,stock:10,yt:'',desc:''},
-    {id:'p27',name:'IoT Based Speed Control of DC Motor',code:'ELX_057',cat:'Motor',price:4999,stock:10,yt:'',desc:''},
-    {id:'p28',name:'IoT Based Farm Management System',code:'ELX_074',cat:'Agriculture',price:34999,stock:10,yt:'',desc:''},
-    {id:'p29',name:'GSM Based Smart Irrigation System Using Arduino',code:'ELX_037',cat:'GSM',price:8999,stock:10,yt:'',desc:''},
-    {id:'p30',name:'IoT Agriculture Monitoring Using ESP32',code:'ELX_066',cat:'ESP32',price:6999,stock:10,yt:'',desc:''},
-    {id:'p31',name:'PID Controlled Heating System',code:'ELX_SM04',cat:'Power Electronics',price:2999,stock:10,yt:'',desc:''},
-    {id:'p32',name:'IoT Based Multiple Tank level Monitoring System Using Load Cell',code:'ELX_036',cat:'IoT',price:8999,stock:10,yt:'',desc:''},
-    {id:'p33',name:'Fire Fighting Robot',code:'ELX_098',cat:'Robotics',price:9499,stock:10,yt:'',desc:''},
-    {id:'p34',name:'IoT Based Water Quality Monitoring Using ESP32',code:'ELX_051',cat:'ESP32',price:9999,stock:10,yt:'',desc:''},
-    {id:'p35',name:'3 Phase Fault Detection System Using NodeMCU',code:'ELX_049',cat:'Electrical',price:11999,stock:10,yt:'',desc:''},
-    {id:'p36',name:'Underground Wireless Coil Fault Detection Robot',code:'ELX_068',cat:'Robotics',price:13999,stock:10,yt:'',desc:''},
-    {id:'p37',name:'IoT Based Weighing Scale',code:'ELX_010',cat:'Embedded',price:5999,stock:10,yt:'',desc:''},
-    {id:'p38',name:'IoT Based Wireless Vehicle Charging Station',code:'ELX_048',cat:'Wireless Energy',price:8999,stock:10,yt:'',desc:''},
-    {id:'p39',name:'Temperature Controlled Smart Water Heater',code:'ELX_SM02',cat:'Simulation',price:2999,stock:10,yt:'',desc:''},
-    {id:'p40',name:'Timer Based Smart Battery Charging System',code:'ELX_054',cat:'Embedded',price:6999,stock:10,yt:'',desc:''},
-    {id:'p41',name:'Transformer Oil Level Measurement',code:'ELX_SM08',cat:'Simulation',price:2999,stock:10,yt:'',desc:''},
-    {id:'p42',name:'Transformer Animal Protection System',code:'ELX_SM07',cat:'Simulation',price:2999,stock:10,yt:'',desc:''},
-    {id:'p43',name:'Gas Leakage Safety System',code:'ELX_061',cat:'GSM',price:4999,stock:10,yt:'',desc:''},
-    {id:'p44',name:'LPG Gas Leakage Detection and Home Security System',code:'ELX_048',cat:'GSM',price:5999,stock:10,yt:'',desc:''},
-    {id:'p45',name:'Smart Dual Pump Management System',code:'ELX_072',cat:'Automation',price:5499,stock:10,yt:'',desc:''},
-    {id:'p46',name:'Astable Multivibrator Using Timer 555',code:'ELX_069',cat:'Electrical',price:1999,stock:10,yt:'',desc:''},
-    {id:'p47',name:'IoT Based Transformer Monitoring Using ESP32',code:'ELX_067',cat:'Transformer',price:7999,stock:10,yt:'',desc:''},
-    {id:'p48',name:'IoT Based Solar String Fault Detection System',code:'ELX_014',cat:'Solar',price:9999,stock:10,yt:'',desc:''},
-    {id:'p49',name:'Wireless Vehicle Charging System',code:'ELX_008',cat:'Wireless Energy',price:7999,stock:10,yt:'',desc:''},
-    {id:'p50',name:'GSM Based Transformer Fault Detection System',code:'',cat:'GSM',price:7999,stock:10,yt:'',desc:''},
-    {id:'p51',name:'Wireless Energy Transmission System',code:'ELX_019',cat:'Wireless Energy',price:5999,stock:10,yt:'',desc:''},
-    {id:'p52',name:'IoT Based Agriculture NPK Monitoring Using ESP8266',code:'ELX_039',cat:'Agriculture',price:19999,stock:10,yt:'',desc:''},
-    {id:'p53',name:'Speed & Direction Control of DC Motor Using IR Remote',code:'ELX_017',cat:'Motor',price:4999,stock:10,yt:'',desc:''},
-    {id:'p54',name:'Alcohol Detection and Automatic Car Engine Locking System Using Arduino',code:'ELX_028',cat:'Automation',price:6999,stock:10,yt:'',desc:''},
-    {id:'p55',name:'Solar Based Irrigation System',code:'ELX_033',cat:'Solar',price:6999,stock:10,yt:'',desc:''},
-    {id:'p56',name:'IoT Based Engine Health Monitoring System',code:'ELX_052',cat:'IoT',price:9999,stock:10,yt:'',desc:''},
-    {id:'p57',name:'Bidirectional Visitor Counter',code:'ELX_031',cat:'8051',price:3999,stock:10,yt:'',desc:''},
-    {id:'p58',name:'36 Watt Wireless Charging System',code:'ELX_053',cat:'Wireless Energy',price:17999,stock:10,yt:'',desc:''},
-    {id:'p59',name:'IoT Based Agriculture Monitoring System',code:'ELX_007',cat:'Agriculture',price:8999,stock:10,yt:'',desc:''},
-    {id:'p60',name:'IoT Based Agriculture Monitoring',code:'ELX_046',cat:'Agriculture',price:17999,stock:10,yt:'',desc:''},
-    {id:'p61',name:'Automatic Railway Gate Operating System Using 8051',code:'ELX_032',cat:'8051',price:4999,stock:10,yt:'',desc:''},
-    {id:'p62',name:'Solar Powered Wireless Vehicle Charging Station',code:'ELX_050',cat:'Solar',price:9999,stock:10,yt:'',desc:''},
-    {id:'p63',name:'Transformer High Temperature Protection System',code:'ELX_SM06',cat:'Simulation',price:2999,stock:10,yt:'',desc:''},
-    {id:'p64',name:'Timer Based Smart Window & Alarm',code:'ELX_045',cat:'Electrical',price:24999,stock:10,yt:'',desc:''},
-    {id:'p65',name:'IoT Based Advanced Residential Energy Meter',code:'ELX_063',cat:'IoT',price:18999,stock:10,yt:'',desc:''},
-    {id:'p66',name:'IoT Based Weather Station Using ESP8266',code:'ELX_024',cat:'ESP32',price:6999,stock:10,yt:'',desc:''},
-    {id:'p67',name:'Transformer Physical Health Protection System',code:'ELX_030',cat:'Electrical',price:6499,stock:10,yt:'',desc:''},
-    {id:'p68',name:'Fire Security System Using Arduino Flame and Smoke Sensor',code:'ELX_SM05',cat:'Simulation',price:2999,stock:10,yt:'',desc:''},
-    {id:'p69',name:'IoT (4G) Based Agriculture Monitoring System',code:'ELX_056',cat:'Agriculture',price:11999,stock:10,yt:'',desc:''},
-    {id:'p70',name:'3 Phase Fault Detection System Using Arduino',code:'ELX_006',cat:'Electrical',price:7999,stock:10,yt:'',desc:''},
-    {id:'p71',name:'Vehicle Accident Prevention System Using Driver\'s Eye Blink',code:'ELX_034',cat:'Automation',price:6499,stock:10,yt:'',desc:''},
-    {id:'p72',name:'IoT Based Automatic Power Factor Controller',code:'ELX_047',cat:'Power Electronics',price:9999,stock:10,yt:'',desc:''},
-    {id:'p73',name:'Soft Starter for AC Motor',code:'ELX_055',cat:'Motor',price:6999,stock:10,yt:'',desc:''},
-    {id:'p74',name:'IoT Based Motor Monitoring System',code:'ELX_011',cat:'Motor',price:11999,stock:10,yt:'',desc:''},
-    {id:'p75',name:'Home Automation Using Android App',code:'ELX_005',cat:'Automation',price:6999,stock:10,yt:'',desc:''},
-    {id:'p76',name:'Single Phase Square Wave Inverter',code:'ELX_064',cat:'Power Electronics',price:5499,stock:10,yt:'',desc:''},
-    {id:'p77',name:'Underground Cable Fault Detection System',code:'ELX_015',cat:'Electrical',price:6599,stock:10,yt:'',desc:''},
-    {id:'p78',name:'Automatic Fire Extinguisher',code:'ELX_059',cat:'GSM',price:4999,stock:10,yt:'',desc:''},
-    {id:'p79',name:'IoT Based Multiple Solar Panel Monitoring & Fault Detection',code:'ELX_042',cat:'Solar',price:18999,stock:10,yt:'',desc:''},
-    {id:'p80',name:'IoT Based Solar Power Monitoring System',code:'ELX_001',cat:'Solar',price:8999,stock:10,yt:'',desc:''},
-    {id:'p81',name:'Wireless Smart Helmet For Driver Safety',code:'ELX_041',cat:'Wireless Energy',price:9999,stock:10,yt:'',desc:''},
-  ];
+  products=SEED_PRODUCTS.map((sp,i)=>({id:'p'+(i+1),...sp,stock:10,yt:'',desc:''}));
   launch();
 };
 
@@ -896,6 +900,35 @@ window.openBill=function(id){
   document.getElementById('billModal').classList.add('open');
 };
 
+
+// ── IMPORT CATALOG TO FIREBASE ──
+window.importCatalogToFirebase=async function(){
+  if(demo||!db){toast('⚠️ Log in with your Firebase account first, then try Import again');return;}
+  const btn=document.getElementById('importCatalogBtn');
+  const already=new Set(products.filter(p=>p.code).map(p=>p.code.toLowerCase()));
+  const alreadyNames=new Set(products.map(p=>(p.name||'').toLowerCase()));
+  const toAdd=SEED_PRODUCTS.filter(sp=>{
+    const codeDup=sp.code&&already.has(sp.code.toLowerCase());
+    const nameDup=alreadyNames.has(sp.name.toLowerCase());
+    return !codeDup&&!nameDup;
+  });
+  if(toAdd.length===0){toast('✅ Catalog already up to date — nothing new to import');return;}
+  if(!confirm(`Import ${toAdd.length} product(s) into your live Firebase catalog now?`))return;
+  btn.disabled=true; const origLabel=btn.textContent; btn.textContent='⏳ Importing 0/'+toAdd.length+'...';
+  let done=0, failed=0;
+  for(const sp of toAdd){
+    try{
+      const data={name:sp.name,code:sp.code,cat:sp.cat,price:sp.price,stock:10,yt:'',desc:''};
+      const r=await window._fb.addDoc(window._fb.collection(db,'products'),data);
+      products.push({id:r.id,...data});
+      done++;
+    }catch(e){failed++;}
+    btn.textContent='⏳ Importing '+(done+failed)+'/'+toAdd.length+'...';
+  }
+  btn.disabled=false; btn.textContent=origLabel;
+  renderProducts(); fillProductPicker();
+  toast(failed?`✅ Imported ${done}, ⚠️ ${failed} failed`:`✅ Imported ${done} product(s) to Firebase`);
+};
 
 // ── SIGNATURE & TERMS ──
 const DEFAULT_TERMS='1. Goods once sold will not be taken back or exchanged.\n2. Warranty is as per the manufacturer / component terms only.\n3. Physical damage, burnt or wrongly connected parts are not covered.\n4. Payment is due as per the agreed date; balance must be cleared before delivery.\n5. All disputes are subject to Malegaon (Nashik) jurisdiction.';
